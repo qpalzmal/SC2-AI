@@ -34,9 +34,9 @@ class MassStalkerBot(sc2.BotAI):
             # finds all the vespene geyser that is by each nexus
             self.vespene_geysers = self.state.vespene_geyser.closer_than(10.0, nexus)
             for vespene_geyser in self.vespene_geysers:
-                # checks if can afford to make assmililator and there is already a gateway warping in
+                # checks if can afford to make assmililator or there is no warping gateway or a gateway already done
                 if not self.can_afford(ASSIMILATOR)\
-                        and not self.already_pending(GATEWAY) or self.units(GATEWAY).not_ready:
+                        or not self.already_pending(GATEWAY) or self.units(GATEWAY).not_ready:
                     break
                 worker = self.select_build_worker(vespene_geyser.position)
                 if worker is None:
