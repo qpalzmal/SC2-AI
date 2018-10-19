@@ -1,11 +1,15 @@
 import sc2
 from sc2 import run_game, maps, Race, Difficulty
+from sc2.constants import *
 from sc2.player import Bot, Computer,\
     # Human
-from sc2.constants import *
 
 
 class MassStalkerBot(sc2.BotAI):
+    def __init__(self):
+        sc2.BotAI.__init__(self)
+        self.warp_researched = False
+
     # on_step function is called for every game step
     # it takes current game state and iteration
     async def on_step(self, iteration):
@@ -17,6 +21,17 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_gateways()
         await self.build_cybernetics()
         await self.build_stalkers()
+
+        if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE) and not self.warp_researched:
+            self.warp_researched = True
+            await self.chrono_cybernetics()
+            await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+
+        if self.units(CYBERNETCSCORE).ready.exists and self
+
+
+        if self.supply_cap - self.supply_used <= 10:
+            await self.do(self.units(STALKER))
 
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
@@ -57,10 +72,13 @@ class MassStalkerBot(sc2.BotAI):
 
     # builds a cybernetics if there isn't one already
     async def build_cybernetics(self):
-        if self.units(PYLON).ready.exists:
+        if self.units(GATEWAY).ready and self.can_afford(CYBERNETICSCORE) and self.units(CYBERNETICSCORE).not_ready:
             pylon = self.units(PYLON).ready.random
-            if self.units(GATEWAY).ready and self.can_afford(CYBERNETICSCORE) and self.units(CYBERNETICSCORE).not_ready:
-                await self.do(worker.build(CYBERNETICSCORE, near=pylon))
+            await self.do(worker.build(CYBERNETICSCORE, near=pylon))
+
+    async def chrono_cybernetics(self):
+        for nexus in self.units(NEXUS).read.exists:
+            if nexus.energy >= 50 and nexus.
 
     async def build_stalkers(self):
         for gateway in self.units(GATEWAY).ready.noqueue and self.can_afford(STALKER):
