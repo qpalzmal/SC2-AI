@@ -12,12 +12,15 @@ class MassStalkerBot(sc2.BotAI):
         await self.distribute_workers()
         await self.build_workers()
         await self.build_supply()
-        await self.build_assimilator()
+        await self.build_assimilators()
+        await self.build_gateways()
+        await self.build_cybernetics()
+        await self.build_stalkers()
 
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
         for nexus in self.units(NEXUS).ready.noqueue:
-            if self.can_afford(PROBE):
+            if self.can_afford(PROBE) and self.units(NEXUS) * 22 <= self.units(PROBE):
                 await self.do(nexus.train(PROBE))
 
     # builds a pylon if there isn't one being made and if there is only 10 or less supply left
@@ -29,7 +32,7 @@ class MassStalkerBot(sc2.BotAI):
                     await self.build(PYLON, near=nexus.first)
 
     # builds assimilator if there are any gateways
-    async def build_assimilator(self):
+    async def build_assimilators(self):
         for nexus in self.units(NEXUS).ready:
             # finds all the vespene geyser that is by each nexus
             self.vespene_geysers = self.state.vespene_geyser.closer_than(10.0, nexus)
@@ -45,6 +48,20 @@ class MassStalkerBot(sc2.BotAI):
                 if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
                     await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
+    # builds a gateways of there are 8 or less
+    async def build_gateways(self):
+        if self.can_afford(GATEWAY) and self.units(GATEWAY).ready.exists <= 8:
+            pylon = self.units(PYLON).ready.random
+            await self.do(worker.build(GATEWAY, near=pylon))
+
+    # builds a cybernetics if there isn't one already
+    async def build_cybernetics(self):
+        if self.units(PYLON).ready.exists:
+            pylon = self.units(PYLON).ready.random
+            if self.units(GATEWAY).ready and self.can_afford(CYBERNETICSCORE) and self.units(CYBERNETICSCORE).not_ready:
+                await self.do(worker.build(CYBERNETICSCORE, near=pylon))
+
+    async def build_stalkers
 
 run_game(maps.get("(2)16-BitLE"), [
     # Human(Race.Protoss),
