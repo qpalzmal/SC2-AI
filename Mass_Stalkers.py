@@ -1,6 +1,7 @@
 import sc2
 from sc2 import run_game, maps, Race, Difficulty
-from sc2.player import Bot, Computer, Human
+from sc2.player import Bot, Computer,\
+    # Human
 from sc2.constants import *
 
 
@@ -61,10 +62,18 @@ class MassStalkerBot(sc2.BotAI):
             if self.units(GATEWAY).ready and self.can_afford(CYBERNETICSCORE) and self.units(CYBERNETICSCORE).not_ready:
                 await self.do(worker.build(CYBERNETICSCORE, near=pylon))
 
-    async def build_stalkers
+    async def build_stalkers(self):
+        for gateway in self.units(GATEWAY).ready.noqueue and self.can_afford(STALKER):
+            await self.do(gateway.train(STALKER))
 
-run_game(maps.get("(2)16-BitLE"), [
-    # Human(Race.Protoss),
-    Bot(Race.Protoss, MassStalkerBot()),
-    Computer(Race.Protoss, Difficulty.VeryEasy)
-], realtime=True)
+
+def main():
+    run_game(maps.get("(2)16-BitLE"), [
+        # Human(Race.Protoss),
+        Bot(Race.Protoss, MassStalkerBot()),
+        Computer(Race.Protoss, Difficulty.VeryEasy)
+    ], realtime=True)
+
+
+if __name__ == "__main__":
+    main()
