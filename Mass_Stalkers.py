@@ -1,8 +1,8 @@
 import sc2
 from sc2 import run_game, maps, Race, Difficulty
 from sc2.constants import *
-from sc2.player import Bot, Computer,\
-    # Human
+from sc2.player import Bot, Computer\
+    # ,Human
 
 
 class MassStalkerBot(sc2.BotAI):
@@ -77,8 +77,8 @@ class MassStalkerBot(sc2.BotAI):
             await self.do(worker.build(CYBERNETICSCORE, near=pylon))
 
     async def chrono_cybernetics(self):
-        for nexus in self.units(NEXUS).read.exists:
-            if nexus.energy >= 50 and nexus.
+        for nexus in self.units(NEXUS).ready.exists:
+            if nexus.energy >= 50 and not self.units(CYBERNETICSCORE).
 
     async def build_stalkers(self):
         for gateway in self.units(GATEWAY).ready.noqueue and self.can_afford(STALKER):
