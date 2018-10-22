@@ -20,15 +20,16 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_assimilator()
         await self.build_cybernetics()
         await self.build_gateways()
+        await self.transform_gateways()
         await self.build_stalkers()
+        await self.chronoboost()
 
+        # researches warpgate research
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE) and not self.warp_researched:
             self.warp_researched = True
-            # await self.chrono_cybernetics()
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
 
-        # if self.units(CYBERNETCSCORE).ready.exists and self
-
+        # attacks with all stalkers if supply is at or over 75
         if self.supply_used >= 75:
             for stalker in self.units(STALKER):
                 await self.do(stalker.attack(self.enemy_start_locations[0]))
@@ -73,15 +74,37 @@ class MassStalkerBot(sc2.BotAI):
                     and not self.already_pending(CYBERNETICSCORE):
                 await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random)
 
-    # async def chrono_cybernetics(self):
-    #     for nexus in self.units(NEXUS).ready.exists:
-    #         if nexus.energy >= 50 and not self.units(CYBERNETICSCORE).
+    # transforms the gateways to warpgates
+    async def transform_gateways(self):
+        for gateway in self.units(GATEWAY).ready.exists:
+            abilities = self.get_available_abilities(gateway)
+            if AbilityId.MORPH_GATEWAY in abilities and self.can_afford(AbilityId.MORPH_GATEWAY):
+                await self.do(gateway(MOPRH_GATEWAY))
 
+    # chronos the cybernetics
+    async def chronoboost(self):
+        for nexus in self.units(NEXUS).ready.exists:
+            abilities = self.get_available_abilities(nexus)
+            if AbilityId.EFFECT_CHRONOBOOST in abilities and self.can_afford(AbilityId.EFFECT_CHRONOBOOST):
+                target = self.units(CYBERNETICSCORE)
+                await self.do(nexus)
+
+    # makes stalkers from all gateways/warpgates
     async def build_stalkers(self):
         if self.units(CYBERNETICSCORE).ready.exists:
-            for gateway in self.units(GATEWAY).ready.noqueue:
-                if self.can_afford(STALKER):
-                    await self.do(gateway.train(STALKER))
+            if self.units(GATEWAY).ready.exists:
+                for gateway in self.units(GATEWAY).ready.noqueue:
+                    if self.can_afford(STALKER):
+                        await self.do(gateway.train(STALKER))
+            if self.units(WARPGATE).ready.exists:
+                for warpgate in self.units(WARPGATE).ready:
+                    abilities = self.get_available_abilities(warpgate)
+                    if self.can_afford(STALKER) and AbilityId.WARPGATETRAIN_STALKER in abilities:
+                        position = self.units(PYLON).ready.random.position
+                        placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
+                        if placement is None:
+                            break
+                        await self.do(warpgate.warp_in(STALKER, placement))
 
 
 def main():
