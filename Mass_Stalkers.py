@@ -15,8 +15,8 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_workers()
         await self.build_supply()
         await self.build_assimilator()
-        await self.build_cybernetics()
         await self.build_gateways()
+        await self.build_cybernetics()
         await self.build_forge()
         await self.transform_gateways()
         await self.build_stalkers()
@@ -39,9 +39,8 @@ class MassStalkerBot(sc2.BotAI):
             elif self.can_afford(RESEARCH_PROTOSSSHIELDSLEVEL1):
                 await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSSHIELDSLEVEL1))
 
-
         # attacks with all stalkers if supply is at or over 75
-        if self.supply_used >= 75:
+        if self.supply_used >= 100:
             for stalker in self.units(STALKER):
                 await self.do(stalker.attack(self.enemy_start_locations[0]))
 
@@ -76,21 +75,21 @@ class MassStalkerBot(sc2.BotAI):
     async def build_gateways(self):
         if self.units(PYLON).ready.exists:
             if self.can_afford(GATEWAY):
-
-                await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
-
+                if self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+                    await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
+                            1 nexus    3 gateway
     # builds a forge if there is already a gateway and cybernetics
     async def build_forge(self):
         if not self.units(FORGE).exists:
             if self.units(GATEWAY).ready.exists and self.units(CYBERNETICSCORES).ready.exists\
-            and self.can_afford(FORGE) and not self.already_pending(FORGE):
+               and self.can_afford(FORGE) and not self.already_pending(FORGE):
                 await self.build(FORGE, near=self.units(PYLON.ready.random))
 
     # builds a cybernetics if there isn't one already
     async def build_cybernetics(self):
         if not self.units(CYBERNETICSCORE).exists:
             if self.units(GATEWAY).ready.exists and self.can_afford(CYBERNETICSCORE)\
-            and not self.already_pending(CYBERNETICSCORE):
+               and not self.already_pending(CYBERNETICSCORE):
                 await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random)
 
     # transforms the gateways to warpgates
@@ -109,7 +108,6 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(CYBERNETICSCORE)))
                 elif self.units(FORGE).ready and not self.units(FORGE).noqueue:
                     await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(FORGE)))
-
 
     # makes stalkers from all gateways/warpgates
     async def build_stalkers(self):
