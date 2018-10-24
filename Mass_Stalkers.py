@@ -6,9 +6,6 @@ from sc2.player import Bot, Computer\
 
 
 class MassStalkerBot(sc2.BotAI):
-    def __init__(self):
-        sc2.BotAI.__init__(self)
-        self.warp_researched = False
 
     # on_step function is called for every game step
     # it takes current game state and iteration
@@ -20,14 +17,28 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_assimilator()
         await self.build_cybernetics()
         await self.build_gateways()
+        await self.build_forge()
         await self.transform_gateways()
         await self.build_stalkers()
         await self.chronoboost()
 
+        # expands
+        if self.units(NEXUS).amount < 3 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
+            await self.expand_now()
+
         # researches warpgate research
-        if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE) and not self.warp_researched:
-            self.warp_researched = True
+        if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+
+        # researches weapon, armor, shield in that order
+        if self.units(FORGE).ready:
+            if self.can_afford(RESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
+            elif self.can_afford(RESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSGROUNDARMORLEVEL1))
+            elif self.can_afford(RESEARCH_PROTOSSSHIELDSLEVEL1):
+                await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSSHIELDSLEVEL1))
+
 
         # attacks with all stalkers if supply is at or over 75
         if self.supply_used >= 75:
@@ -61,10 +72,11 @@ class MassStalkerBot(sc2.BotAI):
                     if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
-    # builds a gateways of there are 8 or less
+    # builds
     async def build_gateways(self):
         if self.units(PYLON).ready.exists:
-            if self.can_afford(GATEWAY) and self.units(GATEWAY).amount <= 8:
+            if self.can_afford(GATEWAY):
+
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a cybernetics if there isn't one already
@@ -86,8 +98,11 @@ class MassStalkerBot(sc2.BotAI):
         for nexus in self.units(NEXUS).ready.exists:
             abilities = self.get_available_abilities(nexus)
             if AbilityId.EFFECT_CHRONOBOOST in abilities and self.can_afford(AbilityId.EFFECT_CHRONOBOOST):
-                target = self.units(CYBERNETICSCORE)
-                await self.do(nexus)
+                if self.units(CYBERNETICSCORE).ready and not self.units(CYBERNETICSCORE).noqueue:
+                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(CYBERNETICSCORE)))
+                elif self.units(FORGE).ready and not self.units(FORGE).noqueue:
+                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(FORGE)))
+
 
     # makes stalkers from all gateways/warpgates
     async def build_stalkers(self):
