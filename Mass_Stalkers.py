@@ -79,11 +79,18 @@ class MassStalkerBot(sc2.BotAI):
 
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
+    # builds a forge if there is already a gateway and cybernetics
+    async def build_forge(self):
+        if not self.units(FORGE).exists:
+            if self.units(GATEWAY).ready.exists and self.units(CYBERNETICSCORES).ready.exists\
+            and self.can_afford(FORGE) and not self.already_pending(FORGE):
+                await self.build(FORGE, near=self.units(PYLON.ready.random))
+
     # builds a cybernetics if there isn't one already
     async def build_cybernetics(self):
         if not self.units(CYBERNETICSCORE).exists:
             if self.units(GATEWAY).ready.exists and self.can_afford(CYBERNETICSCORE)\
-                    and not self.already_pending(CYBERNETICSCORE):
+            and not self.already_pending(CYBERNETICSCORE):
                 await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random)
 
     # transforms the gateways to warpgates
