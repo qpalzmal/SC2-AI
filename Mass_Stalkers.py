@@ -39,10 +39,27 @@ class MassStalkerBot(sc2.BotAI):
             elif self.can_afford(RESEARCH_PROTOSSSHIELDSLEVEL1):
                 await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSSHIELDSLEVEL1))
 
-        # attacks with all stalkers if supply is at or over 75
-        if self.supply_used >= 100:
-            for stalker in self.units(STALKER):
+        # moves idle stalkers to ramps
+        for stalker in self.units(STALKER):
+            if stalker.idle:
+                self.do(stalker.move(self.game_info.))
+
+        # attacks with all stalkers if there are 25 or more stalkers
+        if self.units(STALKER).amount >= 25:
+            for stalker in self.units(STALKER).idle:
                 await self.do(stalker.attack(self.enemy_start_locations[0]))
+
+        # sends stalkers to attack known enemy units
+        if self.known_enemy_units.amount > 0:
+            for stalker in self.units(STALKER).idle:
+                await self.do(stalker.attack(self.known_enemy_units))
+
+        # low health stalkers will micro out of range and attack again
+        if self.known_enemy_units.amount > 0:
+            for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
+                if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
+                    await self.do(stalker.move(not self.units(STALKER).in_attack_range_of(self.known_enemy_units)))
+                    await self.do(stalker.attack(self.known_enemy_units))
 
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
@@ -57,6 +74,8 @@ class MassStalkerBot(sc2.BotAI):
             if nexus.exists:
                 if self.can_afford(PYLON):
                     await self.build(PYLON, near=nexus.random)
+        if self.units(NEXUS).amount == 1 and self.units(NEXUS).first.health_percentage <= 25 and self.units(NEXUS).first.shield_percentage <= 25 :
+            await self.build(PYLON, near=self.game_info.map_center)
 
     # builds assimilator if there are any gateways
     async def build_assimilator(self):
@@ -77,7 +96,7 @@ class MassStalkerBot(sc2.BotAI):
             if self.can_afford(GATEWAY):
                 if self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
                     await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
-                            1 nexus    3 gateway
+
     # builds a forge if there is already a gateway and cybernetics
     async def build_forge(self):
         if not self.units(FORGE).exists:
