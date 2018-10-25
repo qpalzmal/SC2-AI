@@ -6,10 +6,14 @@ from sc2.player import Bot, Computer\
 
 
 class MassStalkerBot(sc2.BotAI):
-
     # on_step function is called for every game step
     # it takes current game state and iteration
     async def on_step(self, iteration):
+
+        if iteration == 0:
+            await self.chat_send("glhf")
+
+        self.army = {STALKER, IMMORTAL}
 
         await self.distribute_workers()
         await self.build_workers()
@@ -41,31 +45,35 @@ class MassStalkerBot(sc2.BotAI):
                 await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_PROTOSSSHIELDSLEVEL1))
 
         # moves idle stalkers to ramps
-        for stalker in self.units(STALKER):
-            if stalker.idle:
-                self.do(stalker.move(self.game_info.))
+        # for unit in army:
+        #     for stalker in self.units(unit):
+        #         if stalker.idle:
+        #             await self.do(stalker.move(self.units(NEXUS)))
 
         # attacks with all stalkers if there are 25 or more stalkers
-        if self.units(STALKER).amount >= 25:
-            for stalker in self.units(STALKER).idle:
-                if self.known_enemy_units.amount > 0:
-                    await self.do(stalker.attack(self.known_enemy_units))
-                elif self.known_enemy_structures.amount > 0:
-                    await self.do(stalker.attack(self.known_enemy_structures))
-                else:
-                    await self.do(stalker.attack(self.enemy_start_locations[0]))
+        for unit_type in self.army:
+            if self.units(unit_type).amount >= 25:
+                for unit in self.units(unit_type).idle:
+                    if self.known_enemy_units.amount > 0:
+                        await self.do(unit.attack(self.known_enemy_units))
+                    elif self.known_enemy_structures.amount > 0:
+                        await self.do(unit.attack(self.known_enemy_structures))
+                    else:
+                        await self.do(unit.attack(self.enemy_start_locations[0]))
 
         # sends stalkers to attack known enemy units
         if self.known_enemy_units.amount > 0:
-            for stalker in self.units(STALKER).idle:
-                await self.do(stalker.attack(self.known_enemy_units))
+            for unit_type in self.army:
+                for unit in self.units(unit_type).idle:
+                    await self.do(unit.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
         if self.known_enemy_units.amount > 0:
-            for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
-                if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
-                    await self.do(stalker.move(not self.units(STALKER).in_attack_range_of(self.known_enemy_units)))
-                    await self.do(stalker.attack(self.known_enemy_units))
+            for unit_type in self.army:
+                for unit in self.units(unit_type).in_attack_range_of(self.known_enemy_units):
+                    if unit.health_percentage <= 10 and unit.shield_percentage <= 10:
+                        await self.do(unit.move(not units.in_attack_range_of(self.known_enemy_units)))
+                        await self.do(unit.attack(self.known_enemy_units))
 
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
