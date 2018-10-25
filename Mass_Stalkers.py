@@ -47,7 +47,12 @@ class MassStalkerBot(sc2.BotAI):
         # attacks with all stalkers if there are 25 or more stalkers
         if self.units(STALKER).amount >= 25:
             for stalker in self.units(STALKER).idle:
-                await self.do(stalker.attack(self.enemy_start_locations[0]))
+                if self.known_enemy_units.amount > 0:
+                    await self.do(stalker.attack(self.known_enemy_units))
+                elif self.known_enemy_structures.amount > 0:
+                    await self.do(stalker.attack(self.known_enemy_structures))
+                else:
+                    await self.do(stalker.attack(self.enemy_start_locations[0]))
 
         # sends stalkers to attack known enemy units
         if self.known_enemy_units.amount > 0:
@@ -63,9 +68,10 @@ class MassStalkerBot(sc2.BotAI):
 
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
-        for nexus in self.units(NEXUS).ready.noqueue:
-            if self.can_afford(PROBE) and self.units(NEXUS).amount * 22 > self.units(PROBE).amount:
-                await self.do(nexus.train(PROBE))
+        if self.units(PROBE).amount <= 50:
+            for nexus in self.units(NEXUS).ready.noqueue:
+                if self.can_afford(PROBE) and self.units(NEXUS).amount * 22 > self.units(PROBE).amount:
+                    await self.do(nexus.train(PROBE))
 
     # builds a pylon if there isn't one being made and if there is only 10 or less supply left
     async def build_supply(self):
