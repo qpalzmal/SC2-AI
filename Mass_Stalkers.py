@@ -16,10 +16,11 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_supply()
         await self.build_assimilator()
         await self.build_gateways()
+        await self.build_robo()
         await self.build_cybernetics()
         await self.build_forge()
         await self.transform_gateways()
-        await self.build_stalkers()
+        await self.build_army()
         await self.chronoboost()
 
         # expands
@@ -69,9 +70,10 @@ class MassStalkerBot(sc2.BotAI):
     # checks all nexus if they are queued up, if not queue up a probe
     async def build_workers(self):
         if self.units(PROBE).amount <= 50:
-            for nexus in self.units(NEXUS).ready.noqueue:
-                if self.can_afford(PROBE) and self.units(NEXUS).amount * 22 > self.units(PROBE).amount:
-                    await self.do(nexus.train(PROBE))
+            if self.units(NEXUS).ready:
+                for nexus in self.units(NEXUS).ready.noqueue:
+                    if self.can_afford(PROBE) and self.units(NEXUS).amount * 22 > self.units(PROBE).amount:
+                        await self.do(nexus.train(PROBE))
 
     # builds a pylon if there isn't one being made and if there is only 10 or less supply left
     async def build_supply(self):
@@ -98,16 +100,20 @@ class MassStalkerBot(sc2.BotAI):
 
     # builds
     async def build_gateways(self):
-        if self.units(PYLON).ready.exists:
-            if self.can_afford(GATEWAY):
-                if self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+        if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready:
+            if self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
                     await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
+
+    async def build_robo(self):
+        if self.units(PYLON).ready.exists and self.units(NEXUS).amount - self.units(ROBOTICSFACILITY).amount > 0 and \
+                self.can_afford(ROBOTICSFACILITY) and self.units(CYBERNETICSCORE).ready
+                await self.build(ROBOTICSFACILITY, near=self.units(PYLON).ready.random, max_distance = 6)
 
     # builds a forge if there is already a gateway and cybernetics
     async def build_forge(self):
         if not self.units(FORGE).exists:
             if self.units(GATEWAY).ready.exists and self.units(CYBERNETICSCORES).ready.exists\
-               and self.can_afford(FORGE) and not self.already_pending(FORGE):
+               and self.can_afford(FORGE) and not self.already_pending(FORGE) and self.units(NEXUS).ready:
                 await self.build(FORGE, near=self.units(PYLON.ready.random))
 
     # builds a cybernetics if there isn't one already
@@ -135,21 +141,29 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(FORGE)))
 
     # makes stalkers from all gateways/warpgates
-    async def build_stalkers(self):
+    async def build_army(self):
+        # makes stalkers from gateway and warpgates
         if self.units(CYBERNETICSCORE).ready.exists:
             if self.units(GATEWAY).ready.exists:
                 for gateway in self.units(GATEWAY).ready.noqueue:
-                    if self.can_afford(STALKER):
+                    if self.can_afford(STALKER) and self.supply_left >= 2:
                         await self.do(gateway.train(STALKER))
             if self.units(WARPGATE).ready.exists:
                 for warpgate in self.units(WARPGATE).ready:
                     abilities = self.get_available_abilities(warpgate)
-                    if self.can_afford(STALKER) and AbilityId.WARPGATETRAIN_STALKER in abilities:
+                    if self.can_afford(STALKER) and self.supply_left >= 2 \
+                            and AbilityId.WARPGATETRAIN_STALKER in abilities:
                         position = self.units(PYLON).ready.random.position
                         placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
                         if placement is None:
                             break
                         await self.do(warpgate.warp_in(STALKER, placement))
+
+        # makes immortals from robos
+        if self.units.(ROBOTICSFACILITY).ready.exists:
+            for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+                if self.can_afford(IMMORTAL) and self.supply_left >= 4:
+                    await self.do(robo.train(IMMORTAL))
 
 
 def main():
