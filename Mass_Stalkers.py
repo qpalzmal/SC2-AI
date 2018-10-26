@@ -29,6 +29,13 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(NEXUS).amount < 3 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
             await self.expand_now()
 
+        # puts 2 probes on each gas
+        # for assimilator in self.units(ASSIMILATOR):
+        #     if assimilator.assigned_harvesters < 2 and assimilator.ready:
+        #         worker = self.select_build_worker(assimilator.position)
+        #         if worker.exists:
+        #             await self.do(worker.gather(assimilator))
+
         # researches warpgate research
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
@@ -78,19 +85,24 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
                     await self.do(stalker.attack(self.known_enemy_units))
 
-    # checks all nexus if they are queued up, if not queue up a probe
+    # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
         if self.units(PROBE).amount <= 50 and self.units(NEXUS).ready:
             for nexus in self.units(NEXUS).ready.noqueue:
-                if self.can_afford(PROBE) and self.units(NEXUS).amount * 22 > self.units(PROBE).amount:
+                if self.can_afford(PROBE) and self.units(NEXUS).amount * 20 > self.units(PROBE).amount:
                     await self.do(nexus.train(PROBE))
 
-    # builds a pylon if there isn't one being made and if there is only 10 or less supply left
+    # builds a pylon on demand
     async def build_supply(self):
-        if self.supply_left <= 6 and not self.already_pending(PYLON):
+        if self.units(NEXUS).amount == 1:
+            supply_left = 6
+        else:
+            supply_left = 10
+        if not self.already_pending(PYLON) and self.supply_left <= supply_left:
             nexus = self.units(NEXUS).ready
             if nexus.exists and self.can_afford(PYLON):
                     await self.build(PYLON, near=nexus.random)
+        # puts pylon in middle of map to stall a loss
         if self.units(NEXUS).amount == 0:
             await self.build(PYLON, near=self.game_info.map_center)
 
@@ -109,10 +121,13 @@ class MassStalkerBot(sc2.BotAI):
                     if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
-    # builds a 3 gateway/per 1 nexus if there is pylon/nexus and can afford one
+    # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
     async def build_gateways(self):
-        if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready \
-         and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+        if self.units(NEXUS).amount > 1:
+            if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready \
+             and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+                await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
+        else:
             await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a robo if there is a pylon/nexus/cybernetics and can afford one
@@ -161,15 +176,22 @@ class MassStalkerBot(sc2.BotAI):
     async def build_army(self):
         # makes stalkers from gateway and warpgates
         if self.units(CYBERNETICSCORE).ready.exists:
+            # gateway section
             if self.units(GATEWAY).ready.exists and self.units(NEXUS).amount > 1:
-                for gateway in self.units(GATEWAY).ready.noqueue:
-                    if self.can_afford(STALKER) and self.supply_left >= 2:
-                        await self.do(gateway.train(STALKER))
+                # queues all stalkers at same time from non queued up gateways
+                gateway_count = self.units(GATEWAY).ready.noqueue.amount
+                if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
+                    for gateway in self.units(GATEWAY).ready.noqueue:
+                        if self.can_afford(STALKER) and self.supply_left >= 2:
+                            await self.do(gateway.train(STALKER))
+            # warpgate section
             if self.units(WARPGATE).ready.exists:
                 for warpgate in self.units(WARPGATE).ready and self.units(NEXUS).amount > 1:
                     abilities = await self.get_available_abilities(warpgate)
+                    if not AbilityId.WARPGATETRAIN_STALKER in abilities:
+                        warpgate_count += 1
                     if self.can_afford(STALKER) and self.supply_left >= 2\
-                       and AbilityId.WARPGATETRAIN_STALKER in abilities:
+                       and AbilityId.WARPGATETRAIN_STALKER in abilities and :
                         # gets initial position for stalker warp-in then moves with a placements step for next warps
                         position = self.units(PYLON).ready.random.position
                         placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
