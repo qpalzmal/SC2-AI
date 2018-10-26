@@ -6,6 +6,10 @@ from sc2.player import Bot, Computer\
 
 
 class MassStalkerBot(sc2.BotAI):
+    def __init__(self):
+        sc2.BotAI.__init__(self)
+        self.built_natural = False
+
     # on_step function is called for every game step
     # it takes current game state and iteration
     async def on_step(self, iteration):
@@ -27,6 +31,7 @@ class MassStalkerBot(sc2.BotAI):
 
         # expands
         if self.units(NEXUS).amount < 3 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
+            self.built_natural = True
             await self.expand_now()
 
         # puts 2 probes on each gas
@@ -123,7 +128,7 @@ class MassStalkerBot(sc2.BotAI):
 
     # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
     async def build_gateways(self):
-        if self.units(NEXUS).amount > 1:
+        if self.built_natural:
             if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready \
              and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
@@ -140,7 +145,7 @@ class MassStalkerBot(sc2.BotAI):
     async def build_forge(self):
         if self.units(NEXUS).ready and self.units(PYLON).ready and self.units(GATEWAY).ready\
          and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE)\
-         and not self.units(FORGE).exists and self.units(NEXUS).amount > 1:
+         and not self.units(FORGE).exists and self.built_natural:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a cybernetics if there is a gateway and can afford
@@ -174,10 +179,10 @@ class MassStalkerBot(sc2.BotAI):
 
     # makes stalkers from all gateways/warpgates
     async def build_army(self):
-        # makes stalkers from gateway and warpgates
+        # makes stalkers from gateway and warpgates and only if more than 1 nexus
         if self.units(CYBERNETICSCORE).ready.exists:
             # gateway section
-            if self.units(GATEWAY).ready.exists and self.units(NEXUS).amount > 1:
+            if self.units(GATEWAY).ready.exists and self.built_natural:
                 # queues all stalkers at same time from non queued up gateways
                 gateway_count = self.units(GATEWAY).ready.noqueue.amount
                 if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
@@ -186,23 +191,27 @@ class MassStalkerBot(sc2.BotAI):
                             await self.do(gateway.train(STALKER))
             # warpgate section
             if self.units(WARPGATE).ready.exists:
-                for warpgate in self.units(WARPGATE).ready and self.units(NEXUS).amount > 1:
+                for warpgate in self.units(WARPGATE).ready and self.built_natural:
                     abilities = await self.get_available_abilities(warpgate)
-                    if not AbilityId.WARPGATETRAIN_STALKER in abilities:
+                    warp_gate_count = 0
+                    if AbilityId.WARPGATETRAIN_STALKER in abilities:
                         warpgate_count += 1
-                    if self.can_afford(STALKER) and self.supply_left >= 2\
-                       and AbilityId.WARPGATETRAIN_STALKER in abilities and :
-                        # gets initial position for stalker warp-in then moves with a placements step for next warps
-                        position = self.units(PYLON).ready.random.position
-                        placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
-                        if placement is None:
-                            break
-                        await self.do(warpgate.warp_in(STALKER, placement))
+                        if self.can_afford(STALKER) and self.supply_left >= 2 and self.minerals >= warpgate_count * 125\
+                                and self.vespene >= warpgate_count * 50:
+                            # gets initial position for stalker warp-in then moves with a placements step for next warps
+                            position = self.units(PYLON).ready.random.position
+                            placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
+                            if placement is None:
+                                break
+                            await self.do(warpgate.warp_in(STALKER, placement))
 
         # makes immortals from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
-                if self.can_afford(IMMORTAL) and self.supply_left >= 4:
+                # queues up all immortals at same time from non queued robos
+                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+                if self.can_afford(IMMORTAL) and self.supply_left >= 4 and self.minerals >= robo_count * 250\
+                        and self.vespene >= robo_count * 100:
                     await self.do(robo.train(IMMORTAL))
 
 
