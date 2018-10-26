@@ -21,14 +21,15 @@ class MassStalkerBot(sc2.BotAI):
         await self.distribute_workers()
         await self.build_workers()
         await self.build_supply()
+        await self.chronoboost()
         await self.build_assimilator()
         await self.build_gateways()
         await self.build_robo()
         await self.build_cybernetics()
         await self.build_forge()
+        await self.build_twilight()
         await self.transform_gateways()
         await self.build_army()
-        await self.chronoboost()
 
         # expands
         if self.units(NEXUS).amount < 3 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
@@ -147,12 +148,17 @@ class MassStalkerBot(sc2.BotAI):
     async def build_forge(self):
         if self.units(NEXUS).ready and self.units(PYLON).ready and self.units(GATEWAY).ready\
          and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE)\
-         and self.units(FORGE).exists is False and self.built_natural:
+         and not self.units(FORGE).exists and self.built_natural:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
+
+    async def build_twilight(self):
+        if self.units(CYBERNETICSCORE).ready and self.units(PYLON).ready and not self.already_pending(TWILIGHTCOUNCIL)\
+         and self.can_afford(TWILIGHTCOUNCIL) and self.built_natural and not self.units(TWILIGHTCOUNCIL).exists:
+            await self.build(TWILIGHTCOUNCIL, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a cybernetics if there is a gateway and can afford
     async def build_cybernetics(self):
-        if self.units(CYBERNETICSCORE).exists is False and self.units(GATEWAY).ready.exists\
+        if not self.units(CYBERNETICSCORE).exists and self.units(GATEWAY).ready.exists\
          and self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
             await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random, max_distance=6)
 
