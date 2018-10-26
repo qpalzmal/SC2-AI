@@ -9,6 +9,7 @@ class MassStalkerBot(sc2.BotAI):
     def __init__(self):
         sc2.BotAI.__init__(self)
         self.built_natural = False
+        self.built_first_pylon = False
 
     # on_step function is called for every game step
     # it takes current game state and iteration
@@ -99,14 +100,15 @@ class MassStalkerBot(sc2.BotAI):
 
     # builds a pylon on demand
     async def build_supply(self):
-        if self.units(NEXUS).amount == 1:
+        if self.built_natural is False:
             supply_left = 6
         else:
             supply_left = 10
         if not self.already_pending(PYLON) and self.supply_left <= supply_left:
             nexus = self.units(NEXUS).ready
             if nexus.exists and self.can_afford(PYLON):
-                    await self.build(PYLON, near=nexus.random)
+                self.built_first_pylon = True
+                await self.build(PYLON, near=nexus.random)
         # puts pylon in middle of map to stall a loss
         if self.units(NEXUS).amount == 0:
             await self.build(PYLON, near=self.game_info.map_center)
@@ -145,12 +147,12 @@ class MassStalkerBot(sc2.BotAI):
     async def build_forge(self):
         if self.units(NEXUS).ready and self.units(PYLON).ready and self.units(GATEWAY).ready\
          and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE)\
-         and not self.units(FORGE).exists and self.built_natural:
+         and self.units(FORGE).exists is False and self.built_natural:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a cybernetics if there is a gateway and can afford
     async def build_cybernetics(self):
-        if not self.units(CYBERNETICSCORE).exists and self.units(GATEWAY).ready.exists\
+        if self.units(CYBERNETICSCORE).exists is False and self.units(GATEWAY).ready.exists\
          and self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
             await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random, max_distance=6)
 
@@ -170,16 +172,17 @@ class MassStalkerBot(sc2.BotAI):
                 cybernetics = self.units(CYBERNETICSCORE).ready.first
                 forge = self.units(CYBERNETICSCORE).ready.first
                 if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(CYBERNETICSCORE).noqueue\
-                   and not self.units(CYBERNETICSCORE).ready and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
-                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(CYBERNETICSCORE)))
+                   and self.units(CYBERNETICSCORE).ready and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
+                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
                 # chronos forge if its researching
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready\
-                        and not self.units(FORGE).noqueue and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
-                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(FORGE)))
-                elif:
-                    for nexus in self.units(NEXUS).ready
-                        self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(NEXUS).ready\
-                        and not self.units(NEXUS).noqueue and not nexus.has_buff
+                        and self.units(FORGE).noqueue is False and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
+                    await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(forge)))
+                # otherwise chronos nexus if its producing probes
+                else:
+                    if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(NEXUS).noqueue is False\
+                            and not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and self.built_first_pylon:
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
 
     # makes stalkers from all gateways/warpgates
     async def build_army(self):
