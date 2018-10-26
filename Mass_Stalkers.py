@@ -47,6 +47,9 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
 
+        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_BLINK):
+            await self.do(self.units(TWILIGHTCOUNCIL).ready.first(AbilityId.RESEARCH_BLINK))
+
         # researches weapon, armor, shield in that order
         if self.units(FORGE).ready:
             forge = self.units(FORGE).ready.first
@@ -173,13 +176,20 @@ class MassStalkerBot(sc2.BotAI):
     async def chronoboost(self):
         for nexus in self.units(NEXUS).ready:
             abilities = await self.get_available_abilities(nexus)
-            # chronos cybernetics if there is a cybernetics, its researching, and can afford the chrono
+            # chronos stuff in priority order
             if AbilityId.EFFECT_CHRONOBOOST in abilities:
                 cybernetics = self.units(CYBERNETICSCORE).ready.first
                 forge = self.units(CYBERNETICSCORE).ready.first
                 if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(CYBERNETICSCORE).noqueue\
                    and self.units(CYBERNETICSCORE).ready and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                     await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
+
+
+                # ADD TWILIGHT CHRONO HERE
+
+
+
+
                 # chronos forge if its researching
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready\
                         and self.units(FORGE).noqueue is False and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
