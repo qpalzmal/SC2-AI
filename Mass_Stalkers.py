@@ -176,6 +176,10 @@ class MassStalkerBot(sc2.BotAI):
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready\
                         and not self.units(FORGE).noqueue and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                     await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(FORGE)))
+                elif:
+                    for nexus in self.units(NEXUS).ready
+                        self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(NEXUS).ready\
+                        and not self.units(NEXUS).noqueue and not nexus.has_buff
 
     # makes stalkers from all gateways/warpgates
     async def build_army(self):
