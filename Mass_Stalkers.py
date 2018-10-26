@@ -37,15 +37,15 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(FORGE).ready:
             forge = self.units(FORGE).ready.first
             abilities = await self.get_available_abilities(forge)
-            if AbilityId.RESEARCH_PROTOSSGROUNDWEAPONSLEVEL in abilities\
-                    and self.can_afford(AbilityId.RESEARCH_PROTOSSGROUNDWEAPONSLEVEL):
-                await self.do(forge(AbilityId.RESEARCH_PROTOSSGROUNDWEAPONSLEVEL))
-            elif AbilityId.RESEARCH_PROTOSSGROUNDARMORLEVEL in abilities \
-                    and self.can_afford(AbilityId.RESEARCH_PROTOSSGROUNDARMORLEVEL):
-                await self.do(forge(AbilityId.RESEARCH_PROTOSSGROUNDARMORLEVEL))
-            elif AbilityId.RESEARCH_PROTOSSSHIELDSLEVEL in abilities \
-                    and self.can_afford(AbilityId.RESEARCH_PROTOSSSHIELDSLEVEL):
-                await self.do(forge(AbilityId.RESEARCH_PROTOSSSHIELDSLEVEL))
+            if AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities\
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
 
         # moves idle stalkers to ramps
         # for unit in army:
@@ -65,11 +65,10 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(stalker.attack(self.enemy_start_locations[0]))
 
         # sends stalkers to attack known enemy units
-        if self.known_enemy_units.amount > 0:
+        # if self.known_enemy_units.amount > 0:
             # for unit_type in self.army:
-            for stalker in self.units(STALKER):
-                if stalker.idle:
-                    await self.do(stalker.attack(self.known_enemy_units))
+            # for stalker in self.units(STALKER).idle:
+            #     await self.do(stalker.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
         if self.known_enemy_units.amount > 0:
@@ -105,6 +104,8 @@ class MassStalkerBot(sc2.BotAI):
                 if self.can_afford(ASSIMILATOR) and self.already_pending(GATEWAY) or self.units(GATEWAY).ready.exists:
                     # checks if there is already a assimilator at the geyser, if not builds an assimilator
                     worker = self.select_build_worker(vespene_geyser.position)
+                    if worker in None:
+                        break
                     if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
@@ -124,7 +125,7 @@ class MassStalkerBot(sc2.BotAI):
     async def build_forge(self):
         if self.units(NEXUS).ready and self.units(PYLON).ready and self.units(GATEWAY).ready\
          and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE)\
-         and not self.units(FORGE).exists:
+         and not self.units(FORGE).exists and self.units(NEXUS).amount > 1:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a cybernetics if there is a gateway and can afford
@@ -160,12 +161,12 @@ class MassStalkerBot(sc2.BotAI):
     async def build_army(self):
         # makes stalkers from gateway and warpgates
         if self.units(CYBERNETICSCORE).ready.exists:
-            if self.units(GATEWAY).ready.exists:
+            if self.units(GATEWAY).ready.exists and self.units(NEXUS).amount > 1:
                 for gateway in self.units(GATEWAY).ready.noqueue:
                     if self.can_afford(STALKER) and self.supply_left >= 2:
                         await self.do(gateway.train(STALKER))
             if self.units(WARPGATE).ready.exists:
-                for warpgate in self.units(WARPGATE).ready:
+                for warpgate in self.units(WARPGATE).ready and self.units(NEXUS).amount > 1:
                     abilities = await self.get_available_abilities(warpgate)
                     if self.can_afford(STALKER) and self.supply_left >= 2\
                        and AbilityId.WARPGATETRAIN_STALKER in abilities:
