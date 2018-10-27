@@ -88,18 +88,18 @@ class MassStalkerBot(sc2.BotAI):
             #     await self.do(stalker.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
-        if self.known_enemy_units.amount > 0:
-            # for unit_type in self.army:
-            for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
-                if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
-                    await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
-                    await self.do(stalker.attack(self.known_enemy_units))
+        # if self.known_enemy_units.amount > 0:
+        #     # for unit_type in self.army:
+        #     for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
+        #         if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
+        #             await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
+        #             await self.do(stalker.attack(self.known_enemy_units))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
-        if self.units(PROBE).amount <= 50 and self.units(NEXUS).ready:
+        if self.units(PROBE).amount <= 40 and self.units(NEXUS).ready:
             for nexus in self.units(NEXUS).ready.noqueue:
-                if self.can_afford(PROBE) and self.units(NEXUS).amount * 20 > self.units(PROBE).amount:
+                if self.can_afford(PROBE) and self.units(NEXUS).ready.amount * 20 > self.units(PROBE).amount:
                     await self.do(nexus.train(PROBE))
 
     # builds a pylon on demand
@@ -121,25 +121,22 @@ class MassStalkerBot(sc2.BotAI):
     async def build_assimilator(self):
         for nexus in self.units(NEXUS).ready:
             # finds all the vespene geyser that is by each nexus
-            self.vespene_geysers = self.state.vespene_geyser.closer_than(10.0, nexus)
+            self.vespene_geysers = self.state.vespene_geyser.closer_than(20.0, nexus)
             for vespene_geyser in self.vespene_geysers:
                 # checks if can afford to make assmililator and there is already a gateway warping in
                 if self.can_afford(ASSIMILATOR) and self.already_pending(GATEWAY) or self.units(GATEWAY).ready.exists:
                     # checks if there is already a assimilator at the geyser, if not builds an assimilator
                     worker = self.select_build_worker(vespene_geyser.position)
-                    if worker in None:
-                        break
                     if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
     # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
     async def build_gateways(self):
-        if self.built_natural:
-            if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready \
-             and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+        if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready:
+            if self.built_natural and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
-        else:
-            await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
+            elif self.units(GATEWAY).amount < 1:
+                await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
     # builds a robo if there is a pylon/nexus/cybernetics and can afford one
     async def build_robo(self):
