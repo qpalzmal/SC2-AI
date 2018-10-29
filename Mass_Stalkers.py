@@ -174,32 +174,32 @@ class MassStalkerBot(sc2.BotAI):
         for nexus in self.units(NEXUS).ready:
             abilities = await self.get_available_abilities(nexus)
             # chronos stuff in priority order
+            # first checks if there is energy for chrono and building is ready
+            # then checks if building is queued and isn't already chronoed
             if AbilityId.EFFECT_CHRONOBOOST in abilities:
                 cybernetics = self.units(CYBERNETICSCORE).ready.first
                 forge = self.units(CYBERNETICSCORE).ready.first
                 twilight = self.units(TWILIGHTCOUNCIL).ready.first
-                # if there is energy for chrono and building is ready
-                # then checks if building is queued and isn't already chronoed
+                # chronos cybernetics
                 if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(CYBERNETICSCORE).ready:
                     if self.units(CYBERNETICSCORE).noqueue is False\
-                        and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
+                     and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
-
-                # ADD TWILIGHT CHRONO HERE
-                elif nexus.energy >= 50 and self.units()
-
-
-
-                # chronos forge if its researching
+                # chronos twilight
+                elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(TWILIGHTCOUNCIL).ready:
+                    if self.units(TWILIGHTCOUNCIL).noqueue is False\
+                     and not twilight.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(twilight)))
+                # chronos forge
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready:
                     if self.units(FORGE).noqueue is False and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(forge)))
-                # otherwise chronos nexus if its producing probes
+                # chronos nexus
                 # additional check to see if first pylon has been made
                 else:
                     if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(NEXUS).ready:
                         if self.units(NEXUS).noqueue is False and not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST)\
-                            and self.built_first_pylon:
+                         and self.built_first_pylon:
                             await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
 
     # makes stalkers from all gateways/warpgates
