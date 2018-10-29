@@ -10,6 +10,17 @@ class MassStalkerBot(sc2.BotAI):
         sc2.BotAI.__init__(self)
         self.built_natural = False
         self.built_first_pylon = False
+        self.unit_type = [STALKER, IMMORTAL]
+        self.upgrade_list = [
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
+            AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2,
+            AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
+            AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3]
 
     # on_step function is called for every game step
     # it takes current game state and iteration
@@ -49,33 +60,50 @@ class MassStalkerBot(sc2.BotAI):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
 
         # researches blink
-        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK):
+        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
             await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
 
         # researches weapon, armor, shield in that order
-        if self.units(FORGE).ready:
+        if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
             forge = self.units(FORGE).ready.first
             abilities = await self.get_available_abilities(forge)
-            if self.built_natural:
-                if AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities\
-                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
-                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
-                elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
-                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
-                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
-                elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
-                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
-                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
 
-        # moves idle stalkers to ramps
-        # for unit in army:
-        #     for stalker in self.units(unit):
-        #         if stalker.idle:
-        #             await self.do(stalker.move(self.units(NEXUS)))
 
-        # attacks with all stalkers if there are 25 or more stalkers
-        # for unit_type in self.army:
-        if self.units(STALKER).amount >= 25:
+    
+            for upgrade in self.upgrade_list:
+                if
+
+
+
+
+            if AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1 in abilities\
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
+
+        # moves idle units to a random nexus
+        for unit_type in self.unit_type:
+            for unit in self.units(unit_type).idle:
+                await self.do(unit.move(self.units(NEXUS).random))
+
+        # attacks with all units of that type if there are 25+ of them
+        for unit_type in self.unit_type:
+            if self.units(unit_type).amount >= 25:
+                for unit in self.units(unit_type).idle:
+                    if self.known_enemy_units.amount > 0:
+                        await self.do(unit.attack(self.known_enemy_units))
+                    elif self.known_enemy_structures.amount > 0:
+                        await self.do(unit.attack(self.known_enemy_structures))
+                    else:
+                        await self.do(unit.attack(self.enemy_start_locations[0]))
+
+        # ---- OLD DELETE LATER ----
+        if self.units().amount.format() >= 25:
             for stalker in self.units(STALKER).idle:
                 if self.known_enemy_units.amount > 0:
                     await self.do(stalker.attack(self.known_enemy_units))
@@ -83,6 +111,7 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(stalker.attack(self.known_enemy_structures))
                 else:
                     await self.do(stalker.attack(self.enemy_start_locations[0]))
+        # ---- OLD DELETE LATER ----
 
         # sends stalkers to attack known enemy units
         # if self.known_enemy_units.amount > 0:
