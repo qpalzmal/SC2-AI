@@ -33,7 +33,8 @@ class MassStalkerBot(sc2.BotAI):
 
         # expands
         if self.units(NEXUS).amount < 3 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
-            self.built_natural = True
+            if self.units(NEXUS).amount == 2:
+                self.built_natural = True
             await self.expand_now()
 
         # puts 2 probes on each gas
@@ -43,10 +44,11 @@ class MassStalkerBot(sc2.BotAI):
         #         if worker.exists:
         #             await self.do(worker.gather(assimilator))
 
-        # researches warpgate research
+        # researches warpgate
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
 
+        # researches blink
         if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK):
             await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
 
@@ -54,15 +56,16 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(FORGE).ready:
             forge = self.units(FORGE).ready.first
             abilities = await self.get_available_abilities(forge)
-            if AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities\
-                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
-                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
-            elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
-                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
-                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
-            elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
-                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
-                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
+            if self.built_natural:
+                if AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities\
+                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
+                elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
+                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
+                elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
+                        and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
+                    await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
 
         # moves idle stalkers to ramps
         # for unit in army:
@@ -185,15 +188,18 @@ class MassStalkerBot(sc2.BotAI):
                     if self.units(CYBERNETICSCORE).noqueue is False\
                      and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
+
                 # chronos twilight
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(TWILIGHTCOUNCIL).ready:
                     if self.units(TWILIGHTCOUNCIL).noqueue is False\
                      and not twilight.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(twilight)))
+
                 # chronos forge
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready:
                     if self.units(FORGE).noqueue is False and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(forge)))
+
                 # chronos nexus
                 # additional check to see if first pylon has been made
                 else:
@@ -214,6 +220,7 @@ class MassStalkerBot(sc2.BotAI):
                     for gateway in self.units(GATEWAY).ready.noqueue:
                         if self.can_afford(STALKER) and self.supply_left >= 2:
                             await self.do(gateway.train(STALKER))
+
             # warpgate section
             if self.units(WARPGATE).ready.exists:
                 for warpgate in self.units(WARPGATE).ready and self.built_natural:
