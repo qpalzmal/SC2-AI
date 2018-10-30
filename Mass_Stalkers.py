@@ -212,18 +212,18 @@ class MassStalkerBot(sc2.BotAI):
                 if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(CYBERNETICSCORE).ready:
                     if self.units(CYBERNETICSCORE).noqueue is False\
                      and not cybernetics.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
-                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(cybernetics)))
 
                 # chronos twilight
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(TWILIGHTCOUNCIL).ready:
                     if self.units(TWILIGHTCOUNCIL).noqueue is False\
                      and not twilight.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
-                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(twilight)))
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(twilight)))
 
                 # chronos forge
                 elif self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(FORGE).ready:
                     if self.units(FORGE).noqueue is False and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
-                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(forge)))
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(forge)))
 
                 # chronos nexus
                 # additional check to see if first pylon has been made
@@ -231,7 +231,7 @@ class MassStalkerBot(sc2.BotAI):
                     if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) and self.units(NEXUS).ready:
                         if self.units(NEXUS).noqueue is False and not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST)\
                          and self.built_first_pylon:
-                            await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(cybernetics)))
+                            await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(cybernetics)))
 
     # makes stalkers from all gateways/warpgates
     async def build_army(self):
