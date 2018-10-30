@@ -98,7 +98,7 @@ class MassStalkerBot(sc2.BotAI):
                 for unit in self.units(unit_type).idle:
                     if self.known_enemy_units.amount > 0:
                         await self.do(unit.attack(self.known_enemy_units))
-                    elif self.known_enemy_structures > 0:
+                    elif self.known_enemy_structures.amount > 0:
                         await self.do(unit.attack(self.known_enemy_structures))
                     else:
                         await self.do(unit.attack(self.enemy_start_locations[0]))
