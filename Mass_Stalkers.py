@@ -10,7 +10,6 @@ class MassStalkerBot(sc2.BotAI):
         sc2.BotAI.__init__(self)
         self.built_natural = False
         self.built_first_pylon = False
-        self.warpgate_count = 0
         self.unit_type = [STALKER, IMMORTAL]
         self.upgrade_list = [
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
@@ -49,6 +48,13 @@ class MassStalkerBot(sc2.BotAI):
                 self.built_natural = True
             await self.expand_now()
 
+        # puts 2 probes on each gas
+        # for assimilator in self.units(ASSIMILATOR):
+        #     if assimilator.assigned_harvesters < 2 and assimilator.ready:
+        #         worker = self.select_build_worker(assimilator.position)
+        #         if worker.exists:
+        #             await self.do(worker.gather(assimilator))
+
         # researches warpgate
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
@@ -61,21 +67,24 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
             forge = self.units(FORGE).ready.first
             abilities = await self.get_available_abilities(forge)
-            for upgrade in range(len(self.upgrade_list)):
-                if self.upgrade_list[upgrade] in abilities and self.can_afford(self.upgrade_list[upgrade]):
-                    await self.do(forge(self.upgrade_list[upgrade]))
 
-            # ---- OLD DELETE LATER ----
-            # if AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1 in abilities\
-            #         and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
-            #     await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
-            # elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
-            #         and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
-            #     await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
-            # elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
-            #         and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
-            #     await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
-            # ---- OLD DELETE LATER ----
+
+
+            for upgrade in self.upgrade_list:
+                if
+
+
+
+
+            if AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1 in abilities\
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1))
+            elif AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1 in abilities \
+                    and self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
+                await self.do(forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1))
 
         # moves idle units to a random nexus
         for unit_type in self.unit_type:
@@ -93,35 +102,30 @@ class MassStalkerBot(sc2.BotAI):
                     else:
                         await self.do(unit.attack(self.enemy_start_locations[0]))
 
-        if self.supply_used >= 100:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    if self.known_enemy_units.amount > 0:
-                        await self.do(unit.attack(self.known_enemy_units))
-                    elif self.known_enemy_structures > 0:
-                        await self.do(unit.attack(self.known_enemy_structures))
-                    else:
-                        await self.do(unit.attack(self.enemy_start_locations[0]))
+        # ---- OLD DELETE LATER ----
+        if self.units().amount.format() >= 25:
+            for stalker in self.units(STALKER).idle:
+                if self.known_enemy_units.amount > 0:
+                    await self.do(stalker.attack(self.known_enemy_units))
+                elif self.known_enemy_structures.amount > 0:
+                    await self.do(stalker.attack(self.known_enemy_structures))
+                else:
+                    await self.do(stalker.attack(self.enemy_start_locations[0]))
+        # ---- OLD DELETE LATER ----
 
-        # sends army to attack known enemy units
-        if self.known_enemy_units.amount > 0:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    await self.do(unit.attack(self.known_enemy_units))
+        # sends stalkers to attack known enemy units
+        # if self.known_enemy_units.amount > 0:
+            # for unit_type in self.army:
+            # for stalker in self.units(STALKER).idle:
+            #     await self.do(stalker.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
-        if self.known_enemy_units.amount > 0:
-            # for unit_type in self.army:
-            for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
-                abilities = self.get_available_abilities(stalker)
-                if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
-                    if AbilityId.EFFECT_BLINK in abilities:
-                        await self.do(stalker(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
-                    else:
-                        # await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
-                        await self.do(stalker.move(self.units(NEXUS).first))
-                        if not stalker.in_attack_range_of(self.known_enemy_units):
-                            await self.do(stalker.attack(self.known_enemy_units))
+        # if self.known_enemy_units.amount > 0:
+        #     # for unit_type in self.army:
+        #     for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
+        #         if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
+        #             await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
+        #             await self.do(stalker.attack(self.known_enemy_units))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
@@ -192,7 +196,7 @@ class MassStalkerBot(sc2.BotAI):
 
     # transforms the gateways to warpgates
     async def transform_gateways(self):
-        for gateway in self.units(GATEWAY).ready.noqueue:
+        for gateway in self.units(GATEWAY).ready:
             abilities = await self.get_available_abilities(gateway)
             if AbilityId.MORPH_GATEWAY in abilities and self.can_afford(AbilityId.MORPH_GATEWAY):
                 await self.do(gateway(AbilityId.MOPRH_GATEWAY))
@@ -250,10 +254,11 @@ class MassStalkerBot(sc2.BotAI):
             if self.units(WARPGATE).ready.exists:
                 for warpgate in self.units(WARPGATE).ready and self.built_natural:
                     abilities = await self.get_available_abilities(warpgate)
+                    warp_gate_count = 0
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        self.warpgate_count += 1
-                        if self.can_afford(STALKER) and self.supply_left >= 2 and self.minerals >= selfwarpgate_count * 125\
-                                and self.vespene >= self.warpgate_count * 50:
+                        warpgate_count += 1
+                        if self.can_afford(STALKER) and self.supply_left >= 2 and self.minerals >= warpgate_count * 125\
+                                and self.vespene >= warpgate_count * 50:
                             # gets initial position for stalker warp-in then moves with a placements step for next warps
                             position = self.units(PYLON).ready.random.position
                             placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
