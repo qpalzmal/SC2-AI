@@ -38,6 +38,8 @@ class MassStalkerBot(sc2.BotAI):
         if iteration == 0:
             await self.chat_send("glhf")
 
+        await self.chat_send(("Iteration: " + str(iteration)))
+
         await self.distribute_workers()
         await self.build_workers()
         await self.build_supply()
@@ -55,21 +57,21 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(NEXUS).amount < 5 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
             if self.units(NEXUS).amount == 2:
                 self.built_natural = True
-            if self.units(NEXUS).amount >= 2:
+            # if self.units(NEXUS).amount >= 2:
 
-                # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
-                if self.units(TWILIGHT)
-
-
+            # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
             await self.expand_now()
+            await self.chat_send("Building Nexus")
 
         # researches warpgate
         if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+            await self.chat_send("Researching Warpgate")
 
         # researches blink
         if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
             await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
+            await self.chat_send("Researching Blink")
 
         # researches weapon, armor, shield in that order
         if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
@@ -78,6 +80,7 @@ class MassStalkerBot(sc2.BotAI):
             for upgrade in range(len(self.upgrade_list)):
                 if self.upgrade_list[upgrade] in abilities and self.can_afford(self.upgrade_list[upgrade]):
                     await self.do(forge(self.upgrade_list[upgrade]))
+                    await self.chat_send("Researching Forge Upgrade")
 
         # moves idle units to a random nexus
         for unit_type in self.unit_type:
@@ -196,8 +199,9 @@ class MassStalkerBot(sc2.BotAI):
     async def transform_gateways(self):
         for gateway in self.units(GATEWAY).ready.noqueue:
             abilities = await self.get_available_abilities(gateway)
-            if AbilityId.MORPH_GATEWAY in abilities and self.can_afford(AbilityId.MORPH_GATEWAY):
+            if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_GATEWAY):
                 await self.do(gateway(AbilityId.MOPRH_GATEWAY))
+                await self.chat_send("Transforming Gateways")
 
     # chronos structures
     async def chronoboost(self):
@@ -212,6 +216,7 @@ class MassStalkerBot(sc2.BotAI):
                         if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
                          and self.units(structure).noqueue is False and self.built_first_pylon:
                             await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
+                            await self.chat_send("Chronoing stuff")
 
     # makes stalkers from all gateways/warpgates
     async def build_army(self):
@@ -225,6 +230,7 @@ class MassStalkerBot(sc2.BotAI):
                     for gateway in self.units(GATEWAY).ready.noqueue:
                         if self.can_afford(STALKER) and self.supply_left >= 2:
                             await self.do(gateway.train(STALKER))
+                            await self.chat_send("GATEWAY Stalkers")
 
             # warpgate section
             if self.units(WARPGATE).ready.exists:
@@ -240,6 +246,7 @@ class MassStalkerBot(sc2.BotAI):
                             if placement is None:
                                 break
                             await self.do(warpgate.warp_in(STALKER, placement))
+                            await self.chat_send("WARPGATE STALKER")
 
         # makes immortals from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
@@ -249,6 +256,7 @@ class MassStalkerBot(sc2.BotAI):
                 if self.can_afford(IMMORTAL) and self.supply_left >= 4 and self.minerals >= robo_count * 250 \
                         and self.vespene >= robo_count * 100:
                     await self.do(robo.train(IMMORTAL))
+                    await self.chat_send("Building Immortal")
 
 
 def main():
