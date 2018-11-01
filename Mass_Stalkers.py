@@ -11,11 +11,12 @@ class MassStalkerBot(sc2.BotAI):
         self.built_natural = False
         self.built_first_pylon = False
         self.warpgate_count = 0
-        self.unit_type = [STALKER, IMMORTAL]
+        self.unit_type = [STALKER, IMMORTAL, COLOSSUS]
         self.structures = [
             CYBERNETICSCORE,
             TWILIGHTCOUNCIL,
             FORGE,
+            ROBOTICSBAY,
             NEXUS,
             ROBOTICSFACILITY,
             WARPGATE]
@@ -64,7 +65,7 @@ class MassStalkerBot(sc2.BotAI):
             await self.chat_send("Building Nexus")
 
         # researches warpgate
-        if self.units(CYBERNETICSCORE).ready and self.can_afford(RESEARCH_WARPGATE):
+        if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
             await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
             await self.chat_send("Researching Warpgate")
 
@@ -72,6 +73,11 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
             await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
             await self.chat_send("Researching Blink")
+
+        # researches thermal lance
+        if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
+            await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
+            await self.chat_send("Researching Thermal Lance")
 
         # researches weapon, armor, shield in that order
         if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
@@ -85,19 +91,9 @@ class MassStalkerBot(sc2.BotAI):
         # moves idle units to a random nexus
         for unit_type in self.unit_type:
             for unit in self.units(unit_type).idle:
-                await self.do(unit.move(self.units(NEXUS).first))
+                await self.do(unit.move(self.units(NEXUS).random))
 
-        # attacks with all units of that type if there are 25+ of them
-        # for unit_type in self.unit_type:
-        #     if self.units(unit_type).amount >= 25:
-        #         for unit in self.units(unit_type).idle:
-        #             if self.known_enemy_units.amount > 0:
-        #                 await self.do(unit.attack(self.known_enemy_units))
-        #             elif self.known_enemy_structures.amount > 0:
-        #                 await self.do(unit.attack(self.known_enemy_structures))
-        #             else:
-        #                 await self.do(unit.attack(self.enemy_start_locations[0]))
-
+        # attacks with all units if supply is over 100
         if self.supply_used >= 100:
             for unit_type in self.unit_type:
                 for unit in self.units(unit_type).idle:
@@ -218,19 +214,22 @@ class MassStalkerBot(sc2.BotAI):
                             await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
                             await self.chat_send("Chronoing stuff")
 
-    # makes stalkers from all gateways/warpgates
+    # makes units
     async def build_army(self):
-        # makes stalkers from gateway and warpgates and only if more than 1 nexus
+        # gateway section
         if self.units(CYBERNETICSCORE).ready.exists:
-            # gateway section
-            if self.units(GATEWAY).ready.exists and self.built_natural:
+        for gateway in self.units(GATEWAY).ready.noqueue:
+            if self.built_natural:
                 # queues all stalkers at same time from non queued up gateways
                 gateway_count = self.units(GATEWAY).ready.noqueue.amount
                 if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
-                    for gateway in self.units(GATEWAY).ready.noqueue:
-                        # if self.can_afford(STALKER) and self.supply_left >= 2:
-                            await self.do(gateway.train(STALKER))
-                            await self.chat_send("GATEWAY Stalkers")
+                    # if self.can_afford(STALKER) and self.supply_left >= 2:
+                        await self.do(gateway.train(STALKER))
+                        await self.chat_send("GATEWAY Stalkers")
+
+                # CONSTANT PRODUCTION
+                # if self.can_afford(STALKER):
+                #     await self.do(gateway.train(STALKER))
 
             # warpgate section
             if self.units(WARPGATE).ready.exists and self.built_natural:
@@ -238,8 +237,8 @@ class MassStalkerBot(sc2.BotAI):
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
                         self.warpgate_count += 1
-                        if self.can_afford(STALKER) and self.supply_left >= 2 \
-                           and self.minerals >= self.warpgate_count * 125 and self.vespene >= self.warpgate_count * 50:
+                        if self.supply_left >= 2 and self.minerals >= self.warpgate_count * 125\
+                                and self.vespene >= self.warpgate_count * 50:
                             # gets initial position for stalker warp-in then moves with a placements step for next warps
                             position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
                             placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
@@ -253,10 +252,20 @@ class MassStalkerBot(sc2.BotAI):
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
                 # queues up all immortals at same time from non queued robos
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
-                if self.can_afford(IMMORTAL) and self.supply_left >= 4 and self.minerals >= robo_count * 250 \
-                        and self.vespene >= robo_count * 100:
+                # keeps a 2:1 ratio of immortals to colossus
+                if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100\
+                        and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
                     await self.do(robo.train(IMMORTAL))
                     await self.chat_send("Building Immortal")
+
+        # makes colossus from robos
+        if self.units(ROBOTICSFACILITY).ready.exists:
+            for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+                # queues up all colo at same time fron non queued robos
+                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+                if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
+                    await self.do(robo.train(COLOSSUS))
+                    await self.chat_send("Building Colossus")
 
 
 def main():
