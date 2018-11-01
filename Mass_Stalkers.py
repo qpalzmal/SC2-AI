@@ -88,15 +88,15 @@ class MassStalkerBot(sc2.BotAI):
                 await self.do(unit.move(self.units(NEXUS).first))
 
         # attacks with all units of that type if there are 25+ of them
-        for unit_type in self.unit_type:
-            if self.units(unit_type).amount >= 25:
-                for unit in self.units(unit_type).idle:
-                    if self.known_enemy_units.amount > 0:
-                        await self.do(unit.attack(self.known_enemy_units))
-                    elif self.known_enemy_structures.amount > 0:
-                        await self.do(unit.attack(self.known_enemy_structures))
-                    else:
-                        await self.do(unit.attack(self.enemy_start_locations[0]))
+        # for unit_type in self.unit_type:
+        #     if self.units(unit_type).amount >= 25:
+        #         for unit in self.units(unit_type).idle:
+        #             if self.known_enemy_units.amount > 0:
+        #                 await self.do(unit.attack(self.known_enemy_units))
+        #             elif self.known_enemy_structures.amount > 0:
+        #                 await self.do(unit.attack(self.known_enemy_structures))
+        #             else:
+        #                 await self.do(unit.attack(self.enemy_start_locations[0]))
 
         if self.supply_used >= 100:
             for unit_type in self.unit_type:
