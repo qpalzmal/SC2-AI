@@ -11,6 +11,7 @@ class MassStalkerBot(sc2.BotAI):
         self.built_natural = False
         self.built_first_pylon = False
         self.warpgate_count = 0
+        self.four_minutes_iteration = 600
         self.unit_type = [STALKER, IMMORTAL, COLOSSUS]
         self.structures = [
             CYBERNETICSCORE,
@@ -55,14 +56,17 @@ class MassStalkerBot(sc2.BotAI):
         await self.build_army()
 
         # expands
-        if self.units(NEXUS).amount < 5 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
-            if self.units(NEXUS).amount == 2:
-                self.built_natural = True
-            # if self.units(NEXUS).amount >= 2:
+        if self.units(NEXUS).amount < 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
+            self.built_natural = True
+            await self.expand_now()
 
             # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
-            await self.expand_now()
+        elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
+            and iteration % self.four_minutes_iteration == 0:
+            self.four_minutes_iteration += 600
             await self.chat_send("Building Nexus")
+            await self.expand_now()
+
 
         # researches warpgate
         if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
