@@ -85,7 +85,7 @@ class MassStalkerBot(sc2.BotAI):
         # moves idle units to a random nexus
         for unit_type in self.unit_type:
             for unit in self.units(unit_type).idle:
-                await self.do(unit.move(self.units(NEXUS).random))
+                await self.do(unit.move(self.units(NEXUS).first))
 
         # attacks with all units of that type if there are 25+ of them
         for unit_type in self.unit_type:
@@ -109,15 +109,15 @@ class MassStalkerBot(sc2.BotAI):
                         await self.do(unit.attack(self.enemy_start_locations[0]))
 
         # sends army to attack known enemy units
-        if self.known_enemy_units.amount > 0:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    await self.do(unit.attack(self.known_enemy_units))
+        # if self.known_enemy_units.amount > 0:
+        #     for unit_type in self.unit_type:
+        #         for unit in self.units(unit_type).idle:
+        #             await self.do(unit.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
         if self.known_enemy_units.amount > 0:
             # for unit_type in self.army:
-            for stalker in self.units(STALKER).in_attack_range_of(self.known_enemy_units):
+            for stalker in self.units(STALKER):
                 abilities = await self.get_available_abilities(stalker)
                 if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
                     if AbilityId.EFFECT_BLINK in abilities:
@@ -125,8 +125,8 @@ class MassStalkerBot(sc2.BotAI):
                     else:
                         # await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
                         await self.do(stalker.move(self.units(NEXUS).first))
-                        if not stalker.in_attack_range_of(self.known_enemy_units):
-                            await self.do(stalker.attack(self.known_enemy_units))
+                        # if not stalker.in_attack_range_of(self.known_enemy_units):
+                        #     await self.do(stalker.attack(self.known_enemy_units))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
@@ -159,8 +159,8 @@ class MassStalkerBot(sc2.BotAI):
                 # checks if can afford to make assmililator and there is already a gateway warping in
                 if self.can_afford(ASSIMILATOR) and self.already_pending(GATEWAY) or self.units(GATEWAY).ready.exists:
                     # checks if there is already a assimilator at the geyser, if not builds an assimilator
-                    worker = self.select_build_worker(vespene_geyser.position)
-                    if not self.units(ASSIMILATOR).closer_than(1.0, vespene_geyser).exists:
+                    worker = self.select_build_worker(vespene_geyser.position, force=True)
+                    if not self.units(ASSIMILATOR).closer_than(5.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
     # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
@@ -197,10 +197,10 @@ class MassStalkerBot(sc2.BotAI):
 
     # transforms the gateways to warpgates
     async def transform_gateways(self):
-        for gateway in self.units(GATEWAY).ready.noqueue:
+        for gateway in self.units(GATEWAY).ready:
             abilities = await self.get_available_abilities(gateway)
-            if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_GATEWAY):
-                await self.do(gateway(AbilityId.MOPRH_GATEWAY))
+            if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_WARPGATE):
+                await self.do(gateway(MORPH_WARPGATE))
                 await self.chat_send("Transforming Gateways")
 
     # chronos structures
@@ -228,21 +228,21 @@ class MassStalkerBot(sc2.BotAI):
                 gateway_count = self.units(GATEWAY).ready.noqueue.amount
                 if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
                     for gateway in self.units(GATEWAY).ready.noqueue:
-                        if self.can_afford(STALKER) and self.supply_left >= 2:
+                        # if self.can_afford(STALKER) and self.supply_left >= 2:
                             await self.do(gateway.train(STALKER))
                             await self.chat_send("GATEWAY Stalkers")
 
             # warpgate section
-            if self.units(WARPGATE).ready.exists:
-                for warpgate in self.units(WARPGATE).ready and self.built_natural:
+            if self.units(WARPGATE).ready.exists and self.built_natural:
+                for warpgate in self.units(WARPGATE).ready:
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
                         self.warpgate_count += 1
                         if self.can_afford(STALKER) and self.supply_left >= 2 \
                            and self.minerals >= self.warpgate_count * 125 and self.vespene >= self.warpgate_count * 50:
                             # gets initial position for stalker warp-in then moves with a placements step for next warps
-                            position = self.units(PYLON).ready.random.position
-                            placement = self.find_placement(AbilityId.WARPGATETRAIN_STALKER, position, placement_step=2)
+                            position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                            placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
                             if placement is None:
                                 break
                             await self.do(warpgate.warp_in(STALKER, placement))
