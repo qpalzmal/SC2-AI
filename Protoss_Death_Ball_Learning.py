@@ -3,6 +3,8 @@ from sc2 import run_game, maps, Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer \
     # ,Human
+import cv2
+import numpy as np
 
 
 class MassStalkerBot(sc2.BotAI):
@@ -20,7 +22,8 @@ class MassStalkerBot(sc2.BotAI):
             ROBOTICSBAY,
             NEXUS,
             ROBOTICSFACILITY,
-            WARPGATE]
+            WARPGATE
+        ]
 
         self.upgrade_list = [
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
@@ -31,7 +34,27 @@ class MassStalkerBot(sc2.BotAI):
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2,
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
-            AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3]
+            AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
+        ]
+
+        self.draw_dict = {
+            # structures
+            NEXUS: [SIZE, (BLUE, GREEN, RED)],
+            PYLON: [SIZE, (BLUE, GREEN, RED)],
+            ASSIMILATOR: [SIZE, (BLUE, GREEN, RED)],
+            GATEWAY: [SIZE, (BLUE, GREEN, RED)],
+            CYBERNETICSCORE: [SIZE, (BLUE, GREEN, RED)],
+            WARPGATE: [SIZE, (BLUE, GREEN, RED)],
+            FORGE: [SIZE, (BLUE, GREEN, RED)],
+            ROBOTICSFACILITY: [SIZE, (BLUE, GREEN, RED)],
+            ROBOTICSBAY: [SIZE, (BLUE, GREEN, RED)],
+            TWILIGHTCOUNCIL: [SIZE, (BLUE, GREEN, RED)],
+            # units
+            PROBE: [SIZE, (BLUE, GREEN, RED)],
+            STALKER: [SIZE, (BLUE, GREEN, RED)],
+            IMMORTAL: [SIZE, (BLUE, GREEN, RED)],
+            COLOSSUS: [SIZE, (BLUE, GREEN, RED)],
+        }
 
     # on_step function is called for every game step
     # it takes current game state and iteration
@@ -42,6 +65,7 @@ class MassStalkerBot(sc2.BotAI):
 
         await self.chat_send(("Iteration: " + str(iteration)))
 
+        await self.intel()
         await self.distribute_workers()
         await self.build_workers()
         await self.build_supply()
@@ -62,11 +86,10 @@ class MassStalkerBot(sc2.BotAI):
 
             # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
         elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
-            and iteration % self.four_minutes_iteration == 0:
+                and iteration % self.four_minutes_iteration == 0:
             self.four_minutes_iteration += 600
             await self.chat_send("Building Nexus")
             await self.expand_now()
-
 
         # researches warpgate
         if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
@@ -127,6 +150,19 @@ class MassStalkerBot(sc2.BotAI):
                         await self.do(stalker.move(self.units(NEXUS).first))
                         # if not stalker.in_attack_range_of(self.known_enemy_units):
                         #     await self.do(stalker.attack(self.known_enemy_units))
+
+    async def intel(self):
+        # arrays are y - x images are x - y so flip array to image
+        # game data is the image
+        game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)
+        for nexus in self.units(NEXUS):
+            nexus_pos = nexus.ready.position
+            cv2.circle(game_data, int(nexus_pos[0]), int(nexus_pos[1]), 10, (0, 255, 0), -1)  # color is bgr
+
+        flipped = cv2.flip(game_data, 0)
+        resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
+        cv2.imshow("Intel", resized)
+        cv2.waitKey(1)
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
