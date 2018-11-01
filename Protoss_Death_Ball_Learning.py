@@ -222,14 +222,14 @@ class MassStalkerBot(sc2.BotAI):
     async def build_army(self):
         # gateway section
         if self.units(CYBERNETICSCORE).ready.exists:
-        for gateway in self.units(GATEWAY).ready.noqueue:
-            if self.built_natural:
-                # queues all stalkers at same time from non queued up gateways
-                gateway_count = self.units(GATEWAY).ready.noqueue.amount
-                if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
-                    # if self.can_afford(STALKER) and self.supply_left >= 2:
-                        await self.do(gateway.train(STALKER))
-                        await self.chat_send("GATEWAY Stalkers")
+            for gateway in self.units(GATEWAY).ready.noqueue:
+                if self.built_natural:
+                    # queues all stalkers at same time from non queued up gateways
+                    gateway_count = self.units(GATEWAY).ready.noqueue.amount
+                    if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
+                        # if self.can_afford(STALKER) and self.supply_left >= 2:
+                            await self.do(gateway.train(STALKER))
+                            await self.chat_send("GATEWAY Stalkers")
 
                 # CONSTANT PRODUCTION
                 # if self.can_afford(STALKER):
