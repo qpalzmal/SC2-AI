@@ -14,8 +14,10 @@ class MassStalkerBot(sc2.BotAI):
         self.built_first_pylon = False
         self.warpgate_count = 0
         self.four_minutes_iteration = 600
-        self.unit_type = [STALKER, IMMORTAL, COLOSSUS]
-            # , OBSERVER]
+
+        # army composition
+        self.unit_type = [STALKER, IMMORTAL, COLOSSUS, OBSERVER]
+        # list containing structures to chrono boost -- top bottom priority
         self.structures = [
             CYBERNETICSCORE,
             TWILIGHTCOUNCIL,
@@ -26,6 +28,7 @@ class MassStalkerBot(sc2.BotAI):
             WARPGATE
         ]
 
+        # forge upgrades -- top bottom priority
         self.upgrade_list = [
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
@@ -70,18 +73,17 @@ class MassStalkerBot(sc2.BotAI):
         # await self.chat_send(("Iteration: " + str(iteration)))
 
         await self.intel()
+        await self.scout()
+        await self.build_tech()
+        await self.research_upgrades()
         await self.distribute_workers()
         await self.build_workers()
         await self.build_supply()
         await self.chronoboost()
         await self.build_assimilator()
-        await self.build_gateways()
-        await self.build_robo()
-        await self.build_cybernetics()
-        await self.build_forge()
-        await self.build_twilight()
         await self.transform_gateways()
         await self.build_army()
+        await self.command_army()
 
         # expands
         if self.units(NEXUS).amount < 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
@@ -94,83 +96,9 @@ class MassStalkerBot(sc2.BotAI):
             await self.chat_send("Building Nexus")
             await self.expand_now()
 
-        # researches warpgate
-        if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
-            await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
-            await self.chat_send("Researching Warpgate")
-
-        # researches blink
-        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
-            await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
-            await self.chat_send("Researching Blink")
-
-        # researches thermal lance
-        if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
-            await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
-            await self.chat_send("Researching Thermal Lance")
-
-        # researches weapon, armor, shield in that order
-        if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
-            forge = self.units(FORGE).ready.first
-            abilities = await self.get_available_abilities(forge)
-            for upgrade in range(len(self.upgrade_list)):
-                if self.upgrade_list[upgrade] in abilities and self.can_afford(self.upgrade_list[upgrade]):
-                    await self.do(forge(self.upgrade_list[upgrade]))
-                    await self.chat_send("Researching Forge Upgrade")
-
         # sends observer to enemy base
         for observer in self.units(OBSERVER).idle:
             await self.do(observer.move(self.enemy_start_locations[0]))
-
-        # sets up observer to stationary mode
-        for observer in self.units(OBSERVER).idle:
-            abilities = self.get_available_abilities(observer)
-
-
-
-
-            if AbilityId.MORPH_SURVEILLANCEMODE
-
-
-
-
-
-        # moves idle units to a random nexus
-        for unit_type in self.unit_type:
-            for unit in self.units(unit_type).idle:
-                await self.do(unit.move(self.units(NEXUS).random))
-
-        # attacks with all units if supply is over 100
-        if self.supply_used >= 100:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    if len(self.known_enemy_units) > 0:
-                        await self.do(unit.attack(self.known_enemy_units))
-                    elif len(self.known_enemy_structures) > 0:
-                        await self.do(unit.attack(self.known_enemy_structures))
-                    else:
-                        await self.do(unit.attack(self.enemy_start_locations[0]))
-
-        # sends army to attack known enemy units
-        if len(self.known_enemy_units) > 0:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    await self.do(unit.attack(self.known_enemy_units))
-
-        # low health stalkers will micro out of range and attack again
-        if len(self.known_enemy_units) > 0:
-            # for unit_type in self.army:
-            for stalker in self.units(STALKER):
-                abilities = await self.get_available_abilities(stalker)
-                if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
-                    if AbilityId.EFFECT_BLINK in abilities:
-                        await self.do(stalker(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
-                        await self.do(stalker.move(self.units(NEXUS).first))
-                    else:
-                        # await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
-                        await self.do(stalker.move(self.units(NEXUS).first))
-                        # if not stalker.in_attack_range_of(self.known_enemy_units):
-                        #     await self.do(stalker.attack(self.known_enemy_units))
 
     async def intel(self):
         # arrays are y - x images are x - y so flip array to image
@@ -182,8 +110,6 @@ class MassStalkerBot(sc2.BotAI):
                 # enters the (x, y) position, size, and color parameters to draw a circle
                 cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
                            self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
-
-
 
         flipped = cv2.flip(game_data, 0)
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
@@ -225,37 +151,58 @@ class MassStalkerBot(sc2.BotAI):
                     if not self.units(ASSIMILATOR).closer_than(5.0, vespene_geyser).exists:
                         await self.do(worker.build(ASSIMILATOR, vespene_geyser))
 
-    # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
-    async def build_gateways(self):
+    async def build_tech(self):
+        # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
         if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready:
             if self.built_natural and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
             elif self.units(GATEWAY).amount < 1:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
-    # builds a robo if there is a pylon/nexus/cybernetics and can afford one
-    async def build_robo(self):
+        # builds a robo if there is a pylon/nexus/cybernetics and can afford one
         if self.units(PYLON).ready.exists and self.units(NEXUS).amount - self.units(ROBOTICSFACILITY).amount > 1 \
-         and self.can_afford(ROBOTICSFACILITY) and self.units(CYBERNETICSCORE).ready:
+                and self.can_afford(ROBOTICSFACILITY) and self.units(CYBERNETICSCORE).ready:
             await self.build(ROBOTICSFACILITY, near=self.units(PYLON).ready.random, max_distance=6)
 
-    # builds a forge if there is already a pylon/gateway/cybernetics/nexus and can afford one
-    async def build_forge(self):
+        # builds a forge if there is already a pylon/gateway/cybernetics/nexus and can afford one
         if self.units(NEXUS).ready and self.units(PYLON).ready and self.units(GATEWAY).ready \
-         and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE) \
-         and not self.units(FORGE).exists and self.built_natural:
+                and self.units(CYBERNETICSCORE).ready and self.can_afford(FORGE) and not self.already_pending(FORGE) \
+                and not self.units(FORGE).exists and self.built_natural:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
 
-    async def build_twilight(self):
         if self.units(CYBERNETICSCORE).ready and self.units(PYLON).ready and not self.already_pending(TWILIGHTCOUNCIL) \
-         and self.can_afford(TWILIGHTCOUNCIL) and self.built_natural and not self.units(TWILIGHTCOUNCIL).exists:
+                and self.can_afford(TWILIGHTCOUNCIL) and self.built_natural and not self.units(TWILIGHTCOUNCIL).exists:
             await self.build(TWILIGHTCOUNCIL, near=self.units(PYLON).ready.random, max_distance=6)
 
-    # builds a cybernetics if there is a gateway and can afford
-    async def build_cybernetics(self):
+        # builds a cybernetics if there is a gateway and can afford
         if not self.units(CYBERNETICSCORE).exists and self.units(GATEWAY).ready.exists \
-         and self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
+                and self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
             await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random, max_distance=6)
+
+    async def research_upgrades(self):
+        # researches warpgate
+        if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
+            await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+            await self.chat_send("Researching Warpgate")
+
+        # researches blink
+        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
+            await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
+            await self.chat_send("Researching Blink")
+
+        # researches thermal lance
+        if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
+            await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
+            await self.chat_send("Researching Thermal Lance")
+
+        # researches weapon, armor, shield in that order
+        if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
+            forge = self.units(FORGE).ready.first
+            abilities = await self.get_available_abilities(forge)
+            for upgrade in range(len(self.upgrade_list)):
+                if self.upgrade_list[upgrade] in abilities and self.can_afford(self.upgrade_list[upgrade]):
+                    await self.do(forge(self.upgrade_list[upgrade]))
+                    await self.chat_send("Researching Forge Upgrade")
 
     # transforms the gateways to warpgates
     async def transform_gateways(self):
@@ -341,6 +288,44 @@ class MassStalkerBot(sc2.BotAI):
                 if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
                     await self.do(robo.train(COLOSSUS))
                     await self.chat_send("Building Colossus")
+
+    async def command_army(self):
+        # moves idle units to a random nexus
+        # for unit_type in self.unit_type:
+        #     for unit in self.units(unit_type).idle:
+        #         await self.do(unit.move(self.units(NEXUS).random))
+
+        # attacks with all units if supply is over 100
+        if self.supply_used >= 100:
+            for unit_type in self.unit_type:
+                for unit in self.units(unit_type).idle:
+                    if len(self.known_enemy_units) > 0:
+                        await self.do(unit.attack(self.known_enemy_units))
+                    elif len(self.known_enemy_structures) > 0:
+                        await self.do(unit.attack(self.known_enemy_structures))
+                    else:
+                        await self.do(unit.attack(self.enemy_start_locations[0]))
+
+        # sends army to attack known enemy units
+        if len(self.known_enemy_units) > 0:
+            for unit_type in self.unit_type:
+                for unit in self.units(unit_type).idle:
+                    await self.do(unit.attack(self.known_enemy_units))
+
+        # low health units will micro out of range and attack again
+        if len(self.known_enemy_units) > 0:
+            for unit_type in self.unit_type:
+                for unit in self.units(unit_type):
+                    abilities = await self.get_available_abilities(unit)
+                    if unit.health_percentage <= 10 and unit.shield_percentage <= 10:
+                        if AbilityId.EFFECT_BLINK in abilities:
+                            await self.do(unit(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
+                            await self.do(unit.move(self.units(NEXUS).first))
+                        else:
+                            # await self.do(unit.move(not stalker.in_attack_range_of(self.known_enemy_units)))
+                            await self.do(unit.move(self.units(NEXUS).first))
+                            # if not unit.in_attack_range_of(self.known_enemy_units):
+                            #     await self.do(unit.attack(self.known_enemy_units))
 
 
 def main():
