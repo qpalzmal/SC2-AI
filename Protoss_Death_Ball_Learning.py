@@ -5,6 +5,7 @@ from sc2.player import Bot, Computer \
     # ,Human
 import cv2
 import numpy as np
+import random
 
 
 class MassStalkerBot(sc2.BotAI):
@@ -115,6 +116,27 @@ class MassStalkerBot(sc2.BotAI):
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
         cv2.imshow("Intel", resized)
         cv2.waitKey(1)
+
+    def random_location(self, enemy_start_location):
+        # start locations is a list of points
+        x = enemy_start_location[0]
+        y = enemy_start_location[1]
+
+        x += ((random.randrange(-20, 20)) / 100) * enemy_start_location[0]
+        y += ((random.randrange(-20, 20)) / 100) * enemy_start_location[1]
+
+        
+
+
+
+    async def scout(self):
+        if self.units(OBSERVER).amount > 0:
+            scout = self.units(OBSERVER)[0]
+            if scout.is_idle:
+                enemy_location = self.enemy_start_locations[0]
+                random_location = self.random_location(enemy_location)
+                print(random_location)
+                await self.do(scout.move(random_location))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
