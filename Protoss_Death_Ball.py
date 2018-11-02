@@ -59,8 +59,6 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(NEXUS).amount < 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
             self.built_natural = True
             await self.expand_now()
-
-            # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
         elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
             and iteration % self.four_minutes_iteration == 0:
             self.four_minutes_iteration += 600
@@ -100,21 +98,21 @@ class MassStalkerBot(sc2.BotAI):
         if self.supply_used >= 100:
             for unit_type in self.unit_type:
                 for unit in self.units(unit_type).idle:
-                    if self.known_enemy_units.amount > 0:
+                    if len(self.known_enemy_units) > 0:
                         await self.do(unit.attack(self.known_enemy_units))
-                    elif self.known_enemy_structures > 0:
+                    elif len(self.known_enemy_structures) > 0:
                         await self.do(unit.attack(self.known_enemy_structures))
                     else:
                         await self.do(unit.attack(self.enemy_start_locations[0]))
 
         # sends army to attack known enemy units
-        # if self.known_enemy_units.amount > 0:
-        #     for unit_type in self.unit_type:
-        #         for unit in self.units(unit_type).idle:
-        #             await self.do(unit.attack(self.known_enemy_units))
+        if len(self.known_enemy_units) > 0:
+            for unit_type in self.unit_type:
+                for unit in self.units(unit_type).idle:
+                    await self.do(unit.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
-        if self.known_enemy_units.amount > 0:
+        if len(self.known_enemy_units) > 0:
             # for unit_type in self.army:
             for stalker in self.units(STALKER):
                 abilities = await self.get_available_abilities(stalker)
@@ -139,7 +137,7 @@ class MassStalkerBot(sc2.BotAI):
         if self.built_natural is False:
             supply_left = 6
         else:
-            supply_left = 10
+            supply_left = 12
         if not self.already_pending(PYLON) and self.supply_left <= supply_left:
             nexus = self.units(NEXUS).ready
             if nexus.exists and self.can_afford(PYLON):

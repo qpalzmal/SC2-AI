@@ -15,6 +15,7 @@ class MassStalkerBot(sc2.BotAI):
         self.warpgate_count = 0
         self.four_minutes_iteration = 600
         self.unit_type = [STALKER, IMMORTAL, COLOSSUS]
+            # , OBSERVER]
         self.structures = [
             CYBERNETICSCORE,
             TWILIGHTCOUNCIL,
@@ -37,23 +38,26 @@ class MassStalkerBot(sc2.BotAI):
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
         ]
 
+        # [SIZE, (BLUE, GREEN, RED)]
         self.draw_dict = {
             # structures
-            NEXUS: [SIZE, (BLUE, GREEN, RED)],
-            PYLON: [SIZE, (BLUE, GREEN, RED)],
-            ASSIMILATOR: [SIZE, (BLUE, GREEN, RED)],
-            GATEWAY: [SIZE, (BLUE, GREEN, RED)],
-            CYBERNETICSCORE: [SIZE, (BLUE, GREEN, RED)],
-            WARPGATE: [SIZE, (BLUE, GREEN, RED)],
-            FORGE: [SIZE, (BLUE, GREEN, RED)],
-            ROBOTICSFACILITY: [SIZE, (BLUE, GREEN, RED)],
-            ROBOTICSBAY: [SIZE, (BLUE, GREEN, RED)],
-            TWILIGHTCOUNCIL: [SIZE, (BLUE, GREEN, RED)],
+            NEXUS: [15, (0, 255, 0)],
+            PYLON: [2, (30, 255, 0)],
+            ASSIMILATOR: [3, (15, 255, 0)],
+            GATEWAY: [5, (100, 255, 0)],
+            CYBERNETICSCORE: [36, (45, 255, 0)],
+            WARPGATE: [5, (100, 255, 0)],
+            FORGE: [4, (60, 255, 0)],
+            ROBOTICSFACILITY: [5, (125, 255, 0)],
+            ROBOTICSBAY: [4, (75, 255, 0)],
+            TWILIGHTCOUNCIL: [4, (90, 255, 0)],
+
             # units
-            PROBE: [SIZE, (BLUE, GREEN, RED)],
-            STALKER: [SIZE, (BLUE, GREEN, RED)],
-            IMMORTAL: [SIZE, (BLUE, GREEN, RED)],
-            COLOSSUS: [SIZE, (BLUE, GREEN, RED)],
+            PROBE: [1, (255, 100, 0)],
+            OBSERVER: [2, (255, 115, 0)],
+            STALKER: [6, (255, 75, 0)],
+            IMMORTAL: [7, (255, 50, 0)],
+            COLOSSUS: [8, (255, 25, 0)]
         }
 
     # on_step function is called for every game step
@@ -63,7 +67,7 @@ class MassStalkerBot(sc2.BotAI):
         if iteration == 0:
             await self.chat_send("glhf")
 
-        await self.chat_send(("Iteration: " + str(iteration)))
+        # await self.chat_send(("Iteration: " + str(iteration)))
 
         await self.intel()
         await self.distribute_workers()
@@ -83,8 +87,7 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(NEXUS).amount < 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
             self.built_natural = True
             await self.expand_now()
-
-            # CREATE WAY TO EXPAND PAST 2 NEXUS AT GOOD TIMES
+        # expands every 4 minutes after the 2nd nexus
         elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
                 and iteration % self.four_minutes_iteration == 0:
             self.four_minutes_iteration += 600
@@ -115,6 +118,23 @@ class MassStalkerBot(sc2.BotAI):
                     await self.do(forge(self.upgrade_list[upgrade]))
                     await self.chat_send("Researching Forge Upgrade")
 
+        # sends observer to enemy base
+        for observer in self.units(OBSERVER).idle:
+            await self.do(observer.move(self.enemy_start_locations[0]))
+
+        # sets up observer to stationary mode
+        for observer in self.units(OBSERVER).idle:
+            abilities = self.get_available_abilities(observer)
+
+
+
+
+            if AbilityId.MORPH_SURVEILLANCEMODE
+
+
+
+
+
         # moves idle units to a random nexus
         for unit_type in self.unit_type:
             for unit in self.units(unit_type).idle:
@@ -124,27 +144,28 @@ class MassStalkerBot(sc2.BotAI):
         if self.supply_used >= 100:
             for unit_type in self.unit_type:
                 for unit in self.units(unit_type).idle:
-                    if self.known_enemy_units.amount > 0:
+                    if len(self.known_enemy_units) > 0:
                         await self.do(unit.attack(self.known_enemy_units))
-                    elif self.known_enemy_structures > 0:
+                    elif len(self.known_enemy_structures) > 0:
                         await self.do(unit.attack(self.known_enemy_structures))
                     else:
                         await self.do(unit.attack(self.enemy_start_locations[0]))
 
         # sends army to attack known enemy units
-        # if self.known_enemy_units.amount > 0:
-        #     for unit_type in self.unit_type:
-        #         for unit in self.units(unit_type).idle:
-        #             await self.do(unit.attack(self.known_enemy_units))
+        if len(self.known_enemy_units) > 0:
+            for unit_type in self.unit_type:
+                for unit in self.units(unit_type).idle:
+                    await self.do(unit.attack(self.known_enemy_units))
 
         # low health stalkers will micro out of range and attack again
-        if self.known_enemy_units.amount > 0:
+        if len(self.known_enemy_units) > 0:
             # for unit_type in self.army:
             for stalker in self.units(STALKER):
                 abilities = await self.get_available_abilities(stalker)
                 if stalker.health_percentage <= 10 and stalker.shield_percentage <= 10:
                     if AbilityId.EFFECT_BLINK in abilities:
                         await self.do(stalker(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
+                        await self.do(stalker.move(self.units(NEXUS).first))
                     else:
                         # await self.do(stalker.move(not stalker.in_attack_range_of(self.known_enemy_units)))
                         await self.do(stalker.move(self.units(NEXUS).first))
@@ -155,9 +176,14 @@ class MassStalkerBot(sc2.BotAI):
         # arrays are y - x images are x - y so flip array to image
         # game data is the image
         game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)
-        for nexus in self.units(NEXUS):
-            nexus_pos = nexus.ready.position
-            cv2.circle(game_data, int(nexus_pos[0]), int(nexus_pos[1]), 10, (0, 255, 0), -1)  # color is bgr
+        for unit_type in self.draw_dict:
+            for unit in self.units(unit_type).ready:
+                unit_pos = unit.ready.position
+                # enters the (x, y) position, size, and color parameters to draw a circle
+                cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
+                           self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
+
+
 
         flipped = cv2.flip(game_data, 0)
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
@@ -176,7 +202,7 @@ class MassStalkerBot(sc2.BotAI):
         if self.built_natural is False:
             supply_left = 6
         else:
-            supply_left = 10
+            supply_left = 12
         if not self.already_pending(PYLON) and self.supply_left <= supply_left:
             nexus = self.units(NEXUS).ready
             if nexus.exists and self.can_afford(PYLON):
@@ -286,6 +312,15 @@ class MassStalkerBot(sc2.BotAI):
                                 break
                             await self.do(warpgate.warp_in(STALKER, placement))
                             await self.chat_send("WARPGATE STALKER")
+        # creates observers from robos
+        if self.units(ROBOTICSFACILITY).ready.exists:
+            for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+                # queues up all observers at same time from non queued robos
+                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+                # always makes 2 observers
+                if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
+                    and self.units(OBSERVER).amount < 2:
+                    await self.do(robo.train(OBSERVER))
 
         # makes immortals from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
