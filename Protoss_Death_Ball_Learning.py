@@ -1,5 +1,5 @@
 import sc2
-from sc2 import run_game, maps, Race, Difficulty
+from sc2 import run_game, maps, Race, Difficulty, position
 from sc2.constants import *
 from sc2.player import Bot, Computer \
     # ,Human
@@ -8,7 +8,7 @@ import numpy as np
 import random
 
 
-class MassStalkerBot(sc2.BotAI):
+class Protoss_Death_Ball_Bot(sc2.BotAI):
     def __init__(self):
         sc2.BotAI.__init__(self)
         self.built_natural = False
@@ -42,6 +42,27 @@ class MassStalkerBot(sc2.BotAI):
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
         ]
 
+        # list of units that will be drawn
+        self.draw_dict_units = [
+            # structures
+            NEXUS,
+            PYLON,
+            ASSIMILATOR,
+            GATEWAY,
+            CYBERNETICSCORE,
+            WARPGATE,
+            FORGE,
+            ROBOTICSFACILITY,
+            ROBOTICSBAY,
+            TWILIGHTCOUNCIL,
+
+            # units
+            PROBE,
+            STALKER,
+            IMMORTAL,
+            COLOSSUS,
+            OBSERVER
+        ]
         # [SIZE, (BLUE, GREEN, RED)]
         self.draw_dict = {
             # structures
@@ -49,7 +70,7 @@ class MassStalkerBot(sc2.BotAI):
             PYLON: [2, (30, 255, 0)],
             ASSIMILATOR: [3, (15, 255, 0)],
             GATEWAY: [5, (100, 255, 0)],
-            CYBERNETICSCORE: [36, (45, 255, 0)],
+            CYBERNETICSCORE: [4, (45, 255, 0)],
             WARPGATE: [5, (100, 255, 0)],
             FORGE: [4, (60, 255, 0)],
             ROBOTICSFACILITY: [5, (125, 255, 0)],
@@ -58,10 +79,10 @@ class MassStalkerBot(sc2.BotAI):
 
             # units
             PROBE: [1, (255, 100, 0)],
-            OBSERVER: [2, (255, 115, 0)],
             STALKER: [6, (255, 75, 0)],
             IMMORTAL: [7, (255, 50, 0)],
-            COLOSSUS: [8, (255, 25, 0)]
+            COLOSSUS: [8, (255, 25, 0)],
+            OBSERVER: [2, (255, 125, 0)]
         }
 
     # on_step function is called for every game step
@@ -105,12 +126,32 @@ class MassStalkerBot(sc2.BotAI):
         # arrays are y - x images are x - y so flip array to image
         # game data is the image
         game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)
-        for unit_type in self.draw_dict:
+
+        # draws own units
+        for unit_type in self.draw_dict_units:
             for unit in self.units(unit_type).ready:
                 unit_pos = unit.ready.position
                 # enters the (x, y) position, size, and color parameters to draw a circle
                 cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
                            self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
+
+        # draws opponent's units
+        main_bases = ["NEXUS", "COMMANDCENTER", "PLANETARYFORTRESS", "ORBITALCOMMAND", "HATCHERY", "LAIR", "HIVE"]
+        # draws opponent's main base as big circle and other structures as small ones
+        for enemy_structure in self.known_enemy_structures:
+            pos = enemy_structure.position
+            if enemy_structure.name in main_bases:
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 15, (0, 0, 255))
+            else:
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (155, 0, 255))
+        workers = ["PROBE", "SCV", "DRONE"]
+        # draws opponent's workers as small circles and other units as big ones
+        for enemy_unit in self.known_enemy_units:
+            pos = enemy_unit.position
+            if enemy_unit.name in workers:
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 1, (155, 155, 255))
+            else:
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (55, 55, 255))
 
         flipped = cv2.flip(game_data, 0)
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
@@ -122,12 +163,21 @@ class MassStalkerBot(sc2.BotAI):
         x = enemy_start_location[0]
         y = enemy_start_location[1]
 
+        # generates random coordinates around the enemy start location
         x += ((random.randrange(-20, 20)) / 100) * enemy_start_location[0]
         y += ((random.randrange(-20, 20)) / 100) * enemy_start_location[1]
 
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        if x > self.game_info.map_size[0]:
+            x = self.game_info.map_size[0]
+        if y > self.game_info.map_size[1]:
+            y = self.game_info.map_size[1]
 
-
-
+        new_location = position.Point2(position.Pointlike((x, y)))
+        return new_location
 
     async def scout(self):
         if self.units(OBSERVER).amount > 0:
@@ -281,14 +331,15 @@ class MassStalkerBot(sc2.BotAI):
                                 break
                             await self.do(warpgate.warp_in(STALKER, placement))
                             await self.chat_send("WARPGATE STALKER")
+
         # creates observers from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
                 # queues up all observers at same time from non queued robos
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
-                # always makes 2 observers
+                # always makes 1 observers
                 if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
-                    and self.units(OBSERVER).amount < 2:
+                        and self.units(OBSERVER).amount < 1:
                     await self.do(robo.train(OBSERVER))
 
         # makes immortals from robos
@@ -353,8 +404,8 @@ class MassStalkerBot(sc2.BotAI):
 def main():
     run_game(maps.get("(2)16-BitLE"), [
         # Human(Race.Protoss),
-        Bot(Race.Protoss, MassStalkerBot()),
-        Computer(Race.Protoss, Difficulty.VeryEasy)
+        Bot(Race.Protoss, Protoss_Death_Ball_Bot()),
+        Computer(Race.Protoss, Difficulty.Hard)
     ], realtime=False)
 
 
