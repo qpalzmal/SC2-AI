@@ -125,7 +125,7 @@ class MassStalkerBot(sc2.BotAI):
         x += ((random.randrange(-20, 20)) / 100) * enemy_start_location[0]
         y += ((random.randrange(-20, 20)) / 100) * enemy_start_location[1]
 
-        
+
 
 
 
