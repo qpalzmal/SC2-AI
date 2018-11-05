@@ -127,14 +127,6 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         # game data is the image
         game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)
 
-        # draws own units
-        for unit_type in self.draw_dict_units:
-            for unit in self.units(unit_type).ready:
-                unit_pos = unit.ready.position
-                # enters the (x, y) position, size, and color parameters to draw a circle
-                cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
-                           self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
-
         # draws opponent's units
         main_bases = ["NEXUS", "COMMANDCENTER", "PLANETARYFORTRESS", "ORBITALCOMMAND", "HATCHERY", "LAIR", "HIVE"]
         # draws opponent's main base as big circle and other structures as small ones
@@ -152,6 +144,39 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 cv2.circle(game_data, (int(pos[0]), int(pos[1])), 1, (155, 155, 255))
             else:
                 cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (55, 55, 255))
+
+        # draws own units
+        for unit_type in self.draw_dict_units:
+            for unit in self.units(unit_type).ready:
+                unit_pos = unit.ready.position
+                # enters the (x, y) position, size, and color parameters to draw a circle
+                cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
+                           self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
+
+        line_max =
+
+        mineral_ratio = self.minerals / 1500
+        if mineral_ratio > 1.0:
+            mineral_ratio = 1.0
+        vespene_ratio = self.vespene / 1500
+        if vespene_ratio > 1.0:
+            vespene_ratio = 1.0
+        current_supply_ratio = self.supply_used / self.supply_cap
+        if current_supply_ratio > 1.0:
+            current_supply_ratio = 1.0
+        max_supply_ratio = self.supply_used / 200
+        if max_supply_ratio > 1.0:
+            max_supply_ratio = 1.0
+        worker_ratio = len(self.units(PROBE).ready) / self.supply_used
+        if worker_ratio > 1.0:
+            worker_ratio = 1.0
+        
+
+        cv2.circle(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (255, 255, 255), 3) # mineral ratio
+        cv2.circle(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (255, 255, 255), 3) # vespene ratio
+        cv2.circle(game_data, (0, 10), (int(line_max * current_supply_ratio), 10), (255, 255, 255), 3) # current supply ratio
+        cv2.circle(game_data, (0, 10), (int(line_max * max_supply_ratio), 10), (255, 255, 255), 3) # max supply ratio
+        cv2.circle(game_data, (0, 10), (int(line_max * _ratio), 10), (255, 255, 255), 3)
 
         flipped = cv2.flip(game_data, 0)
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
@@ -180,13 +205,12 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         return new_location
 
     async def scout(self):
-        if self.units(OBSERVER).amount > 0:
-            scout = self.units(OBSERVER)[0]
-            if scout.is_idle:
+        for observer in self.units(OBSERVER).ready:
+            if observer.is_idle:
                 enemy_location = self.enemy_start_locations[0]
                 random_location = self.random_location(enemy_location)
                 print(random_location)
-                await self.do(scout.move(random_location))
+                await self.do(observer.move(random_location))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
@@ -339,7 +363,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
                 # always makes 1 observers
                 if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
-                        and self.units(OBSERVER).amount < 1:
+                        and self.units(OBSERVER).amount < 2:
                     await self.do(robo.train(OBSERVER))
 
         # makes immortals from robos
