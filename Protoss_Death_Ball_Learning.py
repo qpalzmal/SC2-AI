@@ -42,6 +42,26 @@ class MassStalkerBot(sc2.BotAI):
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
         ]
 
+        self.draw_dict_units = [
+            # structures
+            NEXUS,
+            PYLON,
+            ASSIMILATOR,
+            GATEWAY,
+            CYBERNETICSCORE,
+            WARPGATE,
+            FORGE,
+            ROBOTICSFACILITY,
+            ROBOTICSBAY,
+            TWILIGHTCOUNCIL,
+
+            # units
+            PROBE,
+            OBSERVER,
+            STALKER,
+            IMMORTAL,
+            COLOSSUS
+        ]
         # [SIZE, (BLUE, GREEN, RED)]
         self.draw_dict = {
             # structures
@@ -105,7 +125,7 @@ class MassStalkerBot(sc2.BotAI):
         # arrays are y - x images are x - y so flip array to image
         # game data is the image
         game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)
-        for unit_type in self.draw_dict:
+        for unit_type in self.draw_dict_units:
             for unit in self.units(unit_type).ready:
                 unit_pos = unit.ready.position
                 # enters the (x, y) position, size, and color parameters to draw a circle
@@ -125,7 +145,8 @@ class MassStalkerBot(sc2.BotAI):
         x += ((random.randrange(-20, 20)) / 100) * enemy_start_location[0]
         y += ((random.randrange(-20, 20)) / 100) * enemy_start_location[1]
 
-        
+
+
 
 
 
