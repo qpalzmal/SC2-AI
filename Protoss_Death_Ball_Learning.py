@@ -170,7 +170,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         worker_ratio = len(self.units(PROBE).ready) / self.supply_used
         if worker_ratio > 1.0:
             worker_ratio = 1.0
-        
+
 
         cv2.circle(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (255, 255, 255), 3) # mineral ratio
         cv2.circle(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (255, 255, 255), 3) # vespene ratio
