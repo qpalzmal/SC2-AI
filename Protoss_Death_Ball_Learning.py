@@ -1,12 +1,14 @@
 import sc2
-from sc2 import run_game, maps, Race, Difficulty, position
+from sc2 import run_game, maps, Race, Difficulty, position, Result
 from sc2.constants import *
 from sc2.player import Bot, Computer \
     # ,Human
 import cv2
 import numpy as np
 import random
+import time
 
+HEADLESS = False
 
 class Protoss_Death_Ball_Bot(sc2.BotAI):
     def __init__(self):
@@ -16,7 +18,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         self.delay = 0
         # 1 second =  2.5 iteration
         self.four_minutes_iteration = 600
-
+        self.train_data = []
 
         # army composition
         self.unit_type = [STALKER, IMMORTAL, COLOSSUS, OBSERVER]
@@ -88,6 +90,14 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             COLOSSUS: [8, (255, 25, 0)],
             OBSERVER: [2, (255, 125, 0)]
         }
+
+    # saves the data if ai won game
+    def on_end(self, game_result):
+        print("---- on_end called ----")
+        print(game_result)
+
+        if game_result == Result.Victory:
+            np.save("train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
     # on_step function is called for every game step
     # it takes current game state and iteration
@@ -191,10 +201,12 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         # worker
         cv2.circle(game_data, (0, 10), (int(line_max * worker_ratio), 10), (50, 50, 50), 3)
 
-        flipped = cv2.flip(game_data, 0)
-        resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
-        cv2.imshow("Intel", resized)
-        cv2.waitKey(1)
+        self.flipped = cv2.flip(game_data, 0)
+
+        if not HEADLESS:
+            resized = cv2.resize(self.flipped, dsize=None, fx=2, fy=2)
+            cv2.imshow("Intel", resized)
+            cv2.waitKey(1)
 
     def random_location(self, enemy_start_location):
         # start locations is a list of points
@@ -401,43 +413,6 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     await self.chat_send("Building Colossus")
 
     async def command_army(self):
-        # # moves idle units to a random nexus
-        # for unit_type in self.unit_type:
-        #     for unit in self.units(unit_type).idle:
-        #         await self.do_actions(unit.move(self.units(NEXUS).random))
-        #
-        # # attacks with all units if supply is over 100
-        # if self.supply_used >= 100:
-        #     for unit_type in self.unit_type:
-        #         for unit in self.units(unit_type).idle:
-        #             if len(self.known_enemy_units) > 0:
-        #                 await self.do_actions(unit.attack(self.known_enemy_units))
-        #             elif len(self.known_enemy_structures) > 0:
-        #                 await self.do_actions(unit.attack(self.known_enemy_structures))
-        #             else:
-        #                 await self.do_actions(unit.attack(self.enemy_start_locations[0]))
-        #
-        # # sends army to attack known enemy units
-        # if len(self.known_enemy_units) > 0:
-        #     for unit_type in self.unit_type:
-        #         for unit in self.units(unit_type).idle:
-        #             await self.do_actions(unit.attack(self.known_enemy_units))
-        #
-        # # low health units will micro out of range and attack again
-        # if len(self.known_enemy_units) > 0:
-        #     for unit_type in self.unit_type:
-        #         for unit in self.units(unit_type):
-        #             abilities = await self.get_available_abilities(unit)
-        #             if unit.health_percentage <= 10 and unit.shield_percentage <= 10:
-        #                 if AbilityId.EFFECT_BLINK in abilities:
-        #                     await self.do_actions(unit(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
-        #                     await self.do_actions(unit.move(self.units(NEXUS).first))
-        #                 else:
-        #                     # await self.do_actions(unit.move(not stalker.in_attack_range_of(self.known_enemy_units)))
-        #                     await self.do_actions(unit.move(self.units(NEXUS).first))
-        #                     # if not unit.in_attack_range_of(self.known_enemy_units):
-        #                     #     await self.do_actions(unit.attack(self.known_enemy_units))
-
         choice = random.randrange(0, 4)
         target = False
 
@@ -467,6 +442,10 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     for unit in self.units(unit_type).idle:
                         await self.do_actions(unit.attack(target))
 
+        # appends data to training data
+        y = np.zeros(4)
+        y[choice] = 1
+        self.train_data.append([y, self.flipped])
 
 
 def main():
