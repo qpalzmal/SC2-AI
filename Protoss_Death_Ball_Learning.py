@@ -13,8 +13,10 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         sc2.BotAI.__init__(self)
         self.built_natural = False
         self.built_first_pylon = False
-        self.warpgate_count = 0
+        self.delay = 0
+        # 1 second =  2.5 iteration
         self.four_minutes_iteration = 600
+
 
         # army composition
         self.unit_type = [STALKER, IMMORTAL, COLOSSUS, OBSERVER]
@@ -29,7 +31,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             WARPGATE
         ]
 
-        # forge upgrades -- top bottom priority
+        # forge upgrades -- index priority
         self.upgrade_list = [
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
@@ -63,6 +65,8 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             COLOSSUS,
             OBSERVER
         ]
+
+        # values for how to draw the units
         # [SIZE, (BLUE, GREEN, RED)]
         self.draw_dict = {
             # structures
@@ -120,7 +124,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
 
         # sends observer to enemy base
         for observer in self.units(OBSERVER).idle:
-            await self.do(observer.move(self.enemy_start_locations[0]))
+            await self.do_actions(observer.move(self.enemy_start_locations[0]))
 
     async def intel(self):
         # arrays are y - x images are x - y so flip array to image
@@ -153,30 +157,39 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
                            self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
 
-        line_max =
+        line_max = 50
 
-        mineral_ratio = self.minerals / 1500
+        # mineral ratio
+        mineral_ratio = self.minerals / 1100
         if mineral_ratio > 1.0:
             mineral_ratio = 1.0
-        vespene_ratio = self.vespene / 1500
+
+        vespene_ratio = self.vespene / 900
         if vespene_ratio > 1.0:
             vespene_ratio = 1.0
+
         current_supply_ratio = self.supply_used / self.supply_cap
         if current_supply_ratio > 1.0:
             current_supply_ratio = 1.0
+
         max_supply_ratio = self.supply_used / 200
         if max_supply_ratio > 1.0:
             max_supply_ratio = 1.0
+
         worker_ratio = len(self.units(PROBE).ready) / self.supply_used
         if worker_ratio > 1.0:
             worker_ratio = 1.0
 
-
-        cv2.circle(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (255, 255, 255), 3) # mineral ratio
-        cv2.circle(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (255, 255, 255), 3) # vespene ratio
-        cv2.circle(game_data, (0, 10), (int(line_max * current_supply_ratio), 10), (255, 255, 255), 3) # current supply ratio
-        cv2.circle(game_data, (0, 10), (int(line_max * max_supply_ratio), 10), (255, 255, 255), 3) # max supply ratio
-        cv2.circle(game_data, (0, 10), (int(line_max * _ratio), 10), (255, 255, 255), 3)
+        # mineral ratio
+        cv2.circle(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (250, 250, 250), 3)
+         # vespene ratio
+        cv2.circle(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (200, 200, 200), 3)
+        # current supply ratio
+        cv2.circle(game_data, (0, 10), (int(line_max * current_supply_ratio), 10), (150, 150, 150), 3)
+        # max supply ratio
+        cv2.circle(game_data, (0, 10), (int(line_max * max_supply_ratio), 10), (100, 100, 100), 3)
+        # worker
+        cv2.circle(game_data, (0, 10), (int(line_max * worker_ratio), 10), (50, 50, 50), 3)
 
         flipped = cv2.flip(game_data, 0)
         resized = cv2.resize(flipped, dsize=None, fx=2, fy=2)
@@ -210,14 +223,14 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 enemy_location = self.enemy_start_locations[0]
                 random_location = self.random_location(enemy_location)
                 print(random_location)
-                await self.do(observer.move(random_location))
+                await self.do_actions(observer.move(random_location))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
     async def build_workers(self):
         if self.units(PROBE).amount <= 40 and self.units(NEXUS).ready:
             for nexus in self.units(NEXUS).ready.noqueue:
                 if self.can_afford(PROBE) and self.units(NEXUS).ready.amount * 20 > self.units(PROBE).amount:
-                    await self.do(nexus.train(PROBE))
+                    await self.do_actions(nexus.train(PROBE))
 
     # builds a pylon on demand
     async def build_supply(self):
@@ -245,7 +258,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     # checks if there is already a assimilator at the geyser, if not builds an assimilator
                     worker = self.select_build_worker(vespene_geyser.position, force=True)
                     if not self.units(ASSIMILATOR).closer_than(5.0, vespene_geyser).exists:
-                        await self.do(worker.build(ASSIMILATOR, vespene_geyser))
+                        await self.do_actions(worker.build(ASSIMILATOR, vespene_geyser))
 
     async def build_tech(self):
         # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
@@ -278,17 +291,17 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
     async def research_upgrades(self):
         # researches warpgate
         if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
-            await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+            await self.do_actions(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
             await self.chat_send("Researching Warpgate")
 
         # researches blink
         if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
-            await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
+            await self.do_actions(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
             await self.chat_send("Researching Blink")
 
         # researches thermal lance
         if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
-            await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
+            await self.do_actions(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
             await self.chat_send("Researching Thermal Lance")
 
         # researches weapon, armor, shield in that order
@@ -297,7 +310,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             abilities = await self.get_available_abilities(forge)
             for upgrade in range(len(self.upgrade_list)):
                 if self.upgrade_list[upgrade] in abilities and self.can_afford(self.upgrade_list[upgrade]):
-                    await self.do(forge(self.upgrade_list[upgrade]))
+                    await self.do_actions(forge(self.upgrade_list[upgrade]))
                     await self.chat_send("Researching Forge Upgrade")
 
     # transforms the gateways to warpgates
@@ -305,7 +318,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         for gateway in self.units(GATEWAY).ready:
             abilities = await self.get_available_abilities(gateway)
             if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_WARPGATE):
-                await self.do(gateway(MORPH_WARPGATE))
+                await self.do_actions(gateway(MORPH_WARPGATE))
                 await self.chat_send("Transforming Gateways")
 
     # chronos structures
@@ -320,7 +333,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     if self.units(structure).ready:
                         if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
                          and self.units(structure).noqueue is False and self.built_first_pylon:
-                            await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
+                            await self.do_actions(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
                             await self.chat_send("Chronoing stuff")
 
     # makes units
@@ -333,27 +346,28 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     gateway_count = self.units(GATEWAY).ready.noqueue.amount
                     if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
                         # if self.can_afford(STALKER) and self.supply_left >= 2:
-                            await self.do(gateway.train(STALKER))
+                            await self.do_actions(gateway.train(STALKER))
                             await self.chat_send("GATEWAY Stalkers")
 
                 # CONSTANT PRODUCTION
                 # if self.can_afford(STALKER):
-                #     await self.do(gateway.train(STALKER))
+                #     await self.do_actions(gateway.train(STALKER))
 
             # warpgate section
             if self.units(WARPGATE).ready.exists and self.built_natural:
+                warpgate_count = 0
                 for warpgate in self.units(WARPGATE).ready:
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        self.warpgate_count += 1
-                        if self.supply_left >= 2 and self.minerals >= self.warpgate_count * 125\
-                                and self.vespene >= self.warpgate_count * 50:
+                        warpgate_count += 1
+                        if self.supply_left >= 2 and self.minerals >= warpgate_count * 125\
+                                and self.vespene >= warpgate_count * 50:
                             # gets initial position for stalker warp-in then moves with a placements step for next warps
                             position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
                             placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
                             if placement is None:
                                 break
-                            await self.do(warpgate.warp_in(STALKER, placement))
+                            await self.do_actions(warpgate.warp_in(STALKER, placement))
                             await self.chat_send("WARPGATE STALKER")
 
         # creates observers from robos
@@ -364,7 +378,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 # always makes 1 observers
                 if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
                         and self.units(OBSERVER).amount < 2:
-                    await self.do(robo.train(OBSERVER))
+                    await self.do_actions(robo.train(OBSERVER))
 
         # makes immortals from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
@@ -374,7 +388,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 # keeps a 2:1 ratio of immortals to colossus
                 if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100\
                         and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
-                    await self.do(robo.train(IMMORTAL))
+                    await self.do_actions(robo.train(IMMORTAL))
                     await self.chat_send("Building Immortal")
 
         # makes colossus from robos
@@ -383,46 +397,76 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 # queues up all colo at same time fron non queued robos
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
                 if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
-                    await self.do(robo.train(COLOSSUS))
+                    await self.do_actions(robo.train(COLOSSUS))
                     await self.chat_send("Building Colossus")
 
     async def command_army(self):
-        # moves idle units to a random nexus
+        # # moves idle units to a random nexus
         # for unit_type in self.unit_type:
         #     for unit in self.units(unit_type).idle:
-        #         await self.do(unit.move(self.units(NEXUS).random))
+        #         await self.do_actions(unit.move(self.units(NEXUS).random))
+        #
+        # # attacks with all units if supply is over 100
+        # if self.supply_used >= 100:
+        #     for unit_type in self.unit_type:
+        #         for unit in self.units(unit_type).idle:
+        #             if len(self.known_enemy_units) > 0:
+        #                 await self.do_actions(unit.attack(self.known_enemy_units))
+        #             elif len(self.known_enemy_structures) > 0:
+        #                 await self.do_actions(unit.attack(self.known_enemy_structures))
+        #             else:
+        #                 await self.do_actions(unit.attack(self.enemy_start_locations[0]))
+        #
+        # # sends army to attack known enemy units
+        # if len(self.known_enemy_units) > 0:
+        #     for unit_type in self.unit_type:
+        #         for unit in self.units(unit_type).idle:
+        #             await self.do_actions(unit.attack(self.known_enemy_units))
+        #
+        # # low health units will micro out of range and attack again
+        # if len(self.known_enemy_units) > 0:
+        #     for unit_type in self.unit_type:
+        #         for unit in self.units(unit_type):
+        #             abilities = await self.get_available_abilities(unit)
+        #             if unit.health_percentage <= 10 and unit.shield_percentage <= 10:
+        #                 if AbilityId.EFFECT_BLINK in abilities:
+        #                     await self.do_actions(unit(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
+        #                     await self.do_actions(unit.move(self.units(NEXUS).first))
+        #                 else:
+        #                     # await self.do_actions(unit.move(not stalker.in_attack_range_of(self.known_enemy_units)))
+        #                     await self.do_actions(unit.move(self.units(NEXUS).first))
+        #                     # if not unit.in_attack_range_of(self.known_enemy_units):
+        #                     #     await self.do_actions(unit.attack(self.known_enemy_units))
 
-        # attacks with all units if supply is over 100
-        if self.supply_used >= 100:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    if len(self.known_enemy_units) > 0:
-                        await self.do(unit.attack(self.known_enemy_units))
-                    elif len(self.known_enemy_structures) > 0:
-                        await self.do(unit.attack(self.known_enemy_structures))
-                    else:
-                        await self.do(unit.attack(self.enemy_start_locations[0]))
+        choice = random.randrange(0, 4)
+        target = False
 
-        # sends army to attack known enemy units
-        if len(self.known_enemy_units) > 0:
-            for unit_type in self.unit_type:
-                for unit in self.units(unit_type).idle:
-                    await self.do(unit.attack(self.known_enemy_units))
+        # doesn't attack
+        if choice == 0:
+            if self.iteration > self.delay:
+                wait_time = random.randrange(75, 150)
+                self.delay = self.iteration + wait_time
 
-        # low health units will micro out of range and attack again
-        if len(self.known_enemy_units) > 0:
+        # attacks units closest to a random nexus
+        elif choice == 1:
+            if len(self.known_enemy_units) > 0:
+                target = self.known_enemy_units.closest_to(self.units(NEXUS).random)
+
+        # attacks a random enemy building
+        elif choice == 2:
+            if len(self.known_enemy_structures) > 0:
+                target = self.known_enemy_structures.random
+
+        # attacks the enemy start location
+        elif choice == 3:
+            target = self.enemy_start_locations[0]
+
+        if target:
             for unit_type in self.unit_type:
-                for unit in self.units(unit_type):
-                    abilities = await self.get_available_abilities(unit)
-                    if unit.health_percentage <= 10 and unit.shield_percentage <= 10:
-                        if AbilityId.EFFECT_BLINK in abilities:
-                            await self.do(unit(AbilityId.EFFECT_BLINK, self.units(NEXUS).first))
-                            await self.do(unit.move(self.units(NEXUS).first))
-                        else:
-                            # await self.do(unit.move(not stalker.in_attack_range_of(self.known_enemy_units)))
-                            await self.do(unit.move(self.units(NEXUS).first))
-                            # if not unit.in_attack_range_of(self.known_enemy_units):
-                            #     await self.do(unit.attack(self.known_enemy_units))
+                if len(self.units(unit_type)) > 0:
+                    for unit in self.units(unit_type).idle:
+                        await self.do_actions(unit.attack(target))
+
 
 
 def main():
