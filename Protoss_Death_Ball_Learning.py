@@ -97,7 +97,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         print(game_result)
 
         if game_result == Result.Victory:
-            np.save("train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
+            np.save("Training Data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
     # on_step function is called for every game step
     # it takes current game state and iteration
