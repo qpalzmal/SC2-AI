@@ -101,23 +101,27 @@ for i in range(hm_epochs):
 
         check_data()
 
+        # combine data
+        training_data = no_attacks + attack_closest_to_nexus + attack_enemy_structures + attack_enemy_start
+        random.shuffle(training_data)
+        test_size = 100
+        batch_size = 128
 
+        x_train = np.array([i[1] for i in training_data[:-test_size]]).reshape(-1, 176, 200, 3)
+        y_train = np.array([i[0] for i in training_data[:-test_size]])
 
+        # not out of sample
+        x_test = np.array([i[1] for i in training_data[:-test_size]]).reshape(-1, 176, 200, 3)
+        y_test = np.array([i[0] for i in training_data[:-test_size]])
 
+        model.fit(x_train, y_train,
+                  batch_size=batch_size,
+                  validation_data=(x_test, y_test),
+                  shuffle=True,
+                  verbose=1,
+                  callbacks=[tensorboard])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        model.save("BasicCNN-{}-epochs-{}-LR-STAGE1".format(hm_epochs, learning_rate))
+        current += increment
+        if current > increment:
+            not_maximum = False
