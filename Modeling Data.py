@@ -105,7 +105,7 @@ for i in range(hm_epochs):
         training_data = no_attacks + attack_closest_to_nexus + attack_enemy_structures + attack_enemy_start
         random.shuffle(training_data)
         test_size = 100
-        batch_size = 128
+        batch_size = 32
 
         x_train = np.array([i[1] for i in training_data[:-test_size]]).reshape(-1, 176, 200, 3)
         y_train = np.array([i[0] for i in training_data[:-test_size]])
