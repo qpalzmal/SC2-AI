@@ -7,8 +7,10 @@ import cv2
 import numpy as np
 import random
 import time
+import keras
 
 HEADLESS = False
+
 
 class Protoss_Death_Ball_Bot(sc2.BotAI):
     def __init__(self):
@@ -18,10 +20,12 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         self.delay = 0
         # 1 second =  2.5 iteration
         self.four_minutes_iteration = 600
+        self.use_model = False
         self.train_data = []
 
         # army composition
         self.unit_type = [STALKER, IMMORTAL, COLOSSUS, OBSERVER]
+
         # list containing structures to chrono boost -- top bottom priority
         self.structures = [
             CYBERNETICSCORE,
@@ -90,6 +94,10 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             COLOSSUS: [8, (255, 25, 0)],
             OBSERVER: [2, (255, 125, 0)]
         }
+
+        if self.use_model:
+            print("Using Model")
+            self.model = keras.models.load_mode("BasicCNN-30-epochs-0.0001-LR-42")
 
     # saves the data if ai won game
     def on_end(self, game_result):
@@ -234,7 +242,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             if observer.is_idle:
                 enemy_location = self.enemy_start_locations[0]
                 random_location = self.random_location(enemy_location)
-                print(random_location)
+                # print(random_location)
                 await self.do_actions(observer.move(random_location))
 
     # checks all nexus if they are queued up, if not queue up a probe up to 20 per base to a max of 50
@@ -413,39 +421,51 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                     await self.chat_send("Building Colossus")
 
     async def command_army(self):
-        choice = random.randrange(0, 4)
         target = False
 
-        # doesn't attack
-        if choice == 0:
-            if self.iteration > self.delay:
+        if self.iteration > self.delay:
+            if self.use_model:
+                prediction = self.model.predict([self.flipped.reshape([-1, 176, 200, 3])])
+                choice = np.argmax(prediction[0])
+
+                choice_dict = {0: "No attack",
+                               1: "Attack closest to our nexus",
+                               2: "Attack ene structures",
+                               3: "Attack enemy start"}
+
+                print("Choice #{}:{}".format(choice, choice_dict[choice]))
+            else:
+                choice = random.randrange(0, 4)
+
+            # doesn't attack
+            if choice == 0:
                 wait_time = random.randrange(75, 150)
                 self.delay = self.iteration + wait_time
 
-        # attacks units closest to a random nexus
-        elif choice == 1:
-            if len(self.known_enemy_units) > 0:
-                target = self.known_enemy_units.closest_to(self.units(NEXUS).random)
+            # attacks units closest to a random nexus
+            elif choice == 1:
+                if len(self.known_enemy_units) > 0:
+                    target = self.known_enemy_units.closest_to(self.units(NEXUS).random)
 
-        # attacks a random enemy building
-        elif choice == 2:
-            if len(self.known_enemy_structures) > 0:
-                target = self.known_enemy_structures.random
+            # attacks a random enemy building
+            elif choice == 2:
+                if len(self.known_enemy_structures) > 0:
+                    target = self.known_enemy_structures.random
 
-        # attacks the enemy start location
-        elif choice == 3:
-            target = self.enemy_start_locations[0]
+            # attacks the enemy start location
+            elif choice == 3:
+                target = self.enemy_start_locations[0]
 
-        if target:
-            for unit_type in self.unit_type:
-                if len(self.units(unit_type)) > 0:
-                    for unit in self.units(unit_type).idle:
-                        await self.do_actions(unit.attack(target))
+            if target:
+                for unit_type in self.unit_type:
+                    if len(self.units(unit_type)) > 0:
+                        for unit in self.units(unit_type).idle:
+                            await self.do_actions(unit.attack(target))
 
-        # appends data to training data
-        y = np.zeros(4)
-        y[choice] = 1
-        self.train_data.append([y, self.flipped])
+            # appends data to training data
+            y = np.zeros(4)
+            y[choice] = 1
+            self.train_data.append([y, self.flipped])
 
 
 def main():
