@@ -59,7 +59,7 @@ class MassStalkerBot(sc2.BotAI):
         if self.units(NEXUS).amount < 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS):
             self.built_natural = True
             await self.expand_now()
-        elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
+        elif self.units(NEXUS).amount >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
             and iteration % self.four_minutes_iteration == 0:
             self.four_minutes_iteration += 600
             await self.chat_send("Building Nexus")
@@ -219,34 +219,34 @@ class MassStalkerBot(sc2.BotAI):
     async def build_army(self):
         # gateway section
         if self.units(CYBERNETICSCORE).ready.exists:
-        for gateway in self.units(GATEWAY).ready.noqueue:
-            if self.built_natural:
-                # queues all stalkers at same time from non queued up gateways
-                gateway_count = self.units(GATEWAY).ready.noqueue.amount
-                if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
-                    # if self.can_afford(STALKER) and self.supply_left >= 2:
-                        await self.do(gateway.train(STALKER))
-                        await self.chat_send("GATEWAY Stalkers")
+            for gateway in self.units(GATEWAY).ready.noqueue:
+                if self.built_natural:
+                    # queues all stalkers at same time from non queued up gateways
+                    gateway_count = self.units(GATEWAY).ready.noqueue.amount
+                    if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
+                        # if self.can_afford(STALKER) and self.supply_left >= 2:
+                            await self.do(gateway.train(STALKER))
+                            await self.chat_send("GATEWAY Stalkers")
 
                 # CONSTANT PRODUCTION
                 # if self.can_afford(STALKER):
                 #     await self.do(gateway.train(STALKER))
 
             # warpgate section
-            if self.units(WARPGATE).ready.exists and self.built_natural:
-                for warpgate in self.units(WARPGATE).ready:
-                    abilities = await self.get_available_abilities(warpgate)
-                    if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        self.warpgate_count += 1
-                        if self.supply_left >= 2 and self.minerals >= self.warpgate_count * 125\
-                                and self.vespene >= self.warpgate_count * 50:
-                            # gets initial position for stalker warp-in then moves with a placements step for next warps
-                            position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
-                            placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
-                            if placement is None:
-                                break
-                            await self.do(warpgate.warp_in(STALKER, placement))
-                            await self.chat_send("WARPGATE STALKER")
+        if self.units(WARPGATE).ready.exists and self.built_natural:
+            for warpgate in self.units(WARPGATE).ready:
+                abilities = await self.get_available_abilities(warpgate)
+                if AbilityId.WARPGATETRAIN_STALKER in abilities:
+                    self.warpgate_count += 1
+                    if self.supply_left >= 2 and self.minerals >= self.warpgate_count * 125\
+                            and self.vespene >= self.warpgate_count * 50:
+                        # gets initial position for stalker warp-in then moves with a placements step for next warps
+                        position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                        placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
+                        if placement is None:
+                            break
+                        await self.do(warpgate.warp_in(STALKER, placement))
+                        await self.chat_send("WARPGATE STALKER")
 
         # makes immortals from robos
         if self.units(ROBOTICSFACILITY).ready.exists:

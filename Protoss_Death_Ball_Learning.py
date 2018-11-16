@@ -160,12 +160,12 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (55, 55, 255))
 
         # draws own units
-        for unit_type in self.draw_dict_units:
-            for unit in self.units(unit_type).ready:
-                unit_pos = unit.ready.position
-                # enters the (x, y) position, size, and color parameters to draw a circle
-                cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
-                           self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
+        # for unit_type in self.draw_dict_units:
+        #     for unit in self.units(unit_type).ready:
+        #         unit_pos = unit.ready.position
+        #         # enters the (x, y) position, size, and color parameters to draw a circle
+        #         cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
+        #                    self.draw_dict[unit_type[0]], self.draw_dict[unit_type[1]])
 
         line_max = 50
 
