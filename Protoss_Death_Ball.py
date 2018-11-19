@@ -89,6 +89,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
         x += ((random.randrange(-20, 20)) / 100) * enemy_start_location[0]
         y += ((random.randrange(-20, 20)) / 100) * enemy_start_location[1]
 
+        # keeps coordinates in side map coordinates
         if x < 0:
             x = 0
         if y < 0:
@@ -152,7 +153,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             elif self.units(GATEWAY).amount < 1:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
 
-        # builds a robo if there is a pylon/nexus/cybernetics and can afford one
+        # builds a robo if there is a pylon/cybernetics, can afford one, and on 2 bases or more
         if self.units(PYLON).ready.exists and self.units(NEXUS).amount - self.units(ROBOTICSFACILITY).amount > 1 \
                 and self.can_afford(ROBOTICSFACILITY) and self.units(CYBERNETICSCORE).ready:
             await self.build(ROBOTICSFACILITY, near=self.units(PYLON).ready.random, max_distance=6)
@@ -163,11 +164,12 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                 and not self.units(FORGE).exists and self.built_natural:
             await self.build(FORGE, near=self.units(PYLON).ready.random, max_distance=6)
 
+        # builds a twilight if there is already a pylon/cybernetics and can afford one
         if self.units(CYBERNETICSCORE).ready and self.units(PYLON).ready and not self.already_pending(TWILIGHTCOUNCIL) \
                 and self.can_afford(TWILIGHTCOUNCIL) and self.built_natural and not self.units(TWILIGHTCOUNCIL).exists:
             await self.build(TWILIGHTCOUNCIL, near=self.units(PYLON).ready.random, max_distance=6)
 
-        # builds a cybernetics if there is a gateway and can afford
+        # builds a cybernetics if there is already a gateway and can afford one
         if not self.units(CYBERNETICSCORE).exists and self.units(GATEWAY).ready.exists \
                 and self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
             await self.build(CYBERNETICSCORE, near=self.units(PYLON).ready.random, max_distance=6)
@@ -214,16 +216,15 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
             # then checks if building is queued and isn't already chronoed
             if AbilityId.EFFECT_CHRONOBOOST in abilities:
                 for structure in self.structures:
-                    if self.units(structure).ready:
-                        if self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
+                    if self.units(structure).ready and self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
                          and self.units(structure).noqueue is False and self.built_first_pylon:
-                            await self.do_actions(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
-                            await self.chat_send("Chronoing stuff")
+                        await self.do_actions(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
+                        await self.chat_send("Chronoing stuff")
 
     # makes units
     async def build_army(self):
-        # gateway section
         if self.units(CYBERNETICSCORE).ready.exists:
+            # gateway section
             for gateway in self.units(GATEWAY).ready.noqueue:
                 if self.built_natural:
                     # queues all stalkers at same time from non queued up gateways
@@ -239,22 +240,23 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
 
             # warpgate section
             if self.units(WARPGATE).ready.exists and self.built_natural:
-                warpgate_count = 0
+                warpgate_count = self.units(WARPGATE).ready.amount
                 for warpgate in self.units(WARPGATE).ready:
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        warpgate_count += 1
                         if self.supply_left >= 2 and self.minerals >= warpgate_count * 125\
                                 and self.vespene >= warpgate_count * 50:
                             # gets initial position for stalker warp-in then moves with a placements step for next warps
                             position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
                             placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
-                            if placement is None:
-                                break
-                            await self.do_actions(warpgate.warp_in(STALKER, placement))
-                            await self.chat_send("WARPGATE STALKER")
+                            if placement:
+                                await self.do_actions(warpgate.warp_in(STALKER, placement))
+                                # await self.chat_send("WARPGATE STALKER")
 
-        # creates observers from robos
+        # experimental
+        # cuts down on lines of code for robo production
+        # ----------------------
+        # creates observers/immortal/colossus from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
                 # queues up all observers at same time from non queued robos
@@ -264,25 +266,49 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
                         and self.units(OBSERVER).amount < 2:
                     await self.do_actions(robo.train(OBSERVER))
 
-        # makes immortals from robos
-        if self.units(ROBOTICSFACILITY).ready.exists:
-            for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
                 # queues up all immortals at same time from non queued robos
-                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
                 # keeps a 2:1 ratio of immortals to colossus
-                if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100\
+                if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100 \
                         and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
                     await self.do_actions(robo.train(IMMORTAL))
                     await self.chat_send("Building Immortal")
 
-        # makes colossus from robos
-        if self.units(ROBOTICSFACILITY).ready.exists:
-            for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
                 # queues up all colo at same time fron non queued robos
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
                 if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
                     await self.do_actions(robo.train(COLOSSUS))
                     await self.chat_send("Building Colossus")
+        # ----------------------
+
+        # # creates observers from robos
+        # if self.units(ROBOTICSFACILITY).ready.exists:
+        #     for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+        #         # queues up all observers at same time from non queued robos
+        #         robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+        #         # always makes 1 observers
+        #         if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
+        #                 and self.units(OBSERVER).amount < 2:
+        #             await self.do_actions(robo.train(OBSERVER))
+        #
+        # # makes immortals from robos
+        # if self.units(ROBOTICSFACILITY).ready.exists:
+        #     for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+        #         # queues up all immortals at same time from non queued robos
+        #         robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+        #         # keeps a 2:1 ratio of immortals to colossus
+        #         if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100\
+        #                 and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
+        #             await self.do_actions(robo.train(IMMORTAL))
+        #             await self.chat_send("Building Immortal")
+        #
+        # # makes colossus from robos
+        # if self.units(ROBOTICSFACILITY).ready.exists:
+        #     for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+        #         # queues up all colo at same time fron non queued robos
+        #         robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+        #         if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
+        #             await self.do_actions(robo.train(COLOSSUS))
+        #             await self.chat_send("Building Colossus")
 
     async def command_army(self):
         target = False
@@ -309,7 +335,7 @@ class Protoss_Death_Ball_Bot(sc2.BotAI):
 
             if target:
                 for unit_type in self.unit_type:
-                    if len(self.units(unit_type)) > 0:
+                    if self.units(unit_type).ready.amount > 0:
                         for unit in self.units(unit_type).idle:
                             await self.do_actions(unit.attack(target))
 
