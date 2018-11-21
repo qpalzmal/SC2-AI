@@ -4,8 +4,6 @@ from sc2.constants import *
 from sc2.player import Bot, Computer, Human
 import random
 
-HEADLESS = False
-
 
 class Protoss_Death_Ball(sc2.BotAI):
     def __init__(self):
