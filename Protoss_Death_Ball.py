@@ -41,10 +41,6 @@ class Protoss_Death_Ball(sc2.BotAI):
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
         ]
 
-
-    def on_end(self, game_result):
-        await self.chat_send("gg")
-
     # on_step function is called for every game step
     # it takes current game state and iteration
     async def on_step(self, iteration):

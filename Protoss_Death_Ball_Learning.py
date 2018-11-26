@@ -103,8 +103,6 @@ class Protoss_Death_Ball(sc2.BotAI):
         # print("---- on_end called ----")
         # print(game_result)
 
-        await self.chat_send("gg")
-
         if game_result == Result.Victory:
             np.save("Training Data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
@@ -170,7 +168,7 @@ class Protoss_Death_Ball(sc2.BotAI):
 
         # draws own units
         for unit_type in self.draw_dict_units:
-            if self.units(unit_type).amount >= 1:
+            if self.units(unit_type).ready.amount >= 1:
                 for unit in self.units(unit_type).ready:
                     unit_pos = unit.position
                     # enters the (x, y) position, size, and color parameters to draw a circle
@@ -465,7 +463,7 @@ class Protoss_Death_Ball(sc2.BotAI):
 # ---- implement a map name searcher with try-except ----
 map_list = ["(2)16-BitLE",
             "(2)AcidPlantLE",
-            "(2)CatalystLE,"
+            "(2)CatalystLE",
             "(2)DreamcatcherLE",
             "(2)LostandFoundLE",
             "(2)RedshiftLE"]
