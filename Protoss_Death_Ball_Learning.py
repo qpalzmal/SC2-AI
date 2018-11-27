@@ -133,7 +133,7 @@ class Protoss_Death_Ball(sc2.BotAI):
             self.built_natural = True
             await self.expand_now()
         # expands every 4 minutes after the 2nd nexus
-        elif self.units(NEXUS) >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
+        elif self.units(NEXUS).amount >= 2 and not self.already_pending(NEXUS) and self.can_afford(NEXUS)\
                 and iteration % self.four_minutes_iteration == 0:
             self.four_minutes_iteration += 600
             # await self.chat_send("Building Nexus")
@@ -154,17 +154,17 @@ class Protoss_Death_Ball(sc2.BotAI):
         for enemy_structure in self.known_enemy_structures:
             pos = enemy_structure.position
             if enemy_structure.name in main_bases:
-                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 15, (0, 0, 255))
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), radius=15, color=(0, 0, 255))
             else:
-                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (155, 0, 255))
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), radius=5, color=(155, 0, 255))
         workers = ["PROBE", "SCV", "DRONE"]
         # draws opponent's workers as small circles and other units as big ones
         for enemy_unit in self.known_enemy_units:
             pos = enemy_unit.position
             if enemy_unit.name in workers:
-                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 1, (155, 155, 255))
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), radius=1, color=(155, 155, 255))
             else:
-                cv2.circle(game_data, (int(pos[0]), int(pos[1])), 5, (55, 55, 255))
+                cv2.circle(game_data, (int(pos[0]), int(pos[1])), radius=5, color=(55, 55, 255))
 
         # draws own units
         for unit_type in self.draw_dict_units:
@@ -172,8 +172,8 @@ class Protoss_Death_Ball(sc2.BotAI):
                 for unit in self.units(unit_type).ready:
                     unit_pos = unit.position
                     # enters the (x, y) position, size, and color parameters to draw a circle
-                    cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])),
-                               self.draw_dict[unit_type[self.draw_dict_units[unit_type]]], self.draw_dict[unit_type[self.draw_dict_units[unit_type]]])
+                    cv2.circle(game_data, (int(unit_pos[0]), int(unit_pos[1])), radius=self.draw_dict[unit_type][0],
+                               color=self.draw_dict[unit_type][1])
 
         line_max = 50
 
@@ -199,15 +199,15 @@ class Protoss_Death_Ball(sc2.BotAI):
             worker_ratio = 1.0
 
         # mineral ratio
-        cv2.circle(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (250, 250, 250), 3)
+        cv2.line(game_data, (0, 3), (int(line_max * mineral_ratio), 3), (250, 250, 250), 3)
         # vespene ratio
-        cv2.circle(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (200, 200, 200), 3)
+        cv2.line(game_data, (0, 7), (int(line_max * vespene_ratio), 7), (200, 200, 200), 3)
         # current supply ratio
-        cv2.circle(game_data, (0, 10), (int(line_max * current_supply_ratio), 10), (150, 150, 150), 3)
+        cv2.line(game_data, (0, 10), (int(line_max * current_supply_ratio), 10), (150, 150, 150), 3)
         # max supply ratio
-        cv2.circle(game_data, (0, 10), (int(line_max * max_supply_ratio), 10), (100, 100, 100), 3)
+        cv2.line(game_data, (0, 10), (int(line_max * max_supply_ratio), 10), (100, 100, 100), 3)
         # worker
-        cv2.circle(game_data, (0, 10), (int(line_max * worker_ratio), 10), (50, 50, 50), 3)
+        cv2.line(game_data, (0, 10), (int(line_max * worker_ratio), 10), (50, 50, 50), 3)
 
         self.flipped = cv2.flip(game_data, 0)
 
