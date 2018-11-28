@@ -317,7 +317,7 @@ map_name = map_list[random.randrange(0, len(map_list))]
 def main():
     run_game(maps.get(map_name), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        # Computer(Race.Protoss, Difficulty.Hard),
+        # Computer(Race.Protoss, Difficulty.Hard)
         Human(Race.Protoss)
     ], realtime=True)
 

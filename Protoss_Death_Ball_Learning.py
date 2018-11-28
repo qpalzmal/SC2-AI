@@ -461,6 +461,8 @@ class Protoss_Death_Ball(sc2.BotAI):
 
 
 # ---- implement a map name searcher with try-except ----
+have_map = False
+
 map_list = ["(2)16-BitLE",
             "(2)AcidPlantLE",
             "(2)CatalystLE",
@@ -468,15 +470,31 @@ map_list = ["(2)16-BitLE",
             "(2)LostandFoundLE",
             "(2)RedshiftLE"]
 
-map_name = map_list[random.randrange(0, len(map_list))]
+
+def map_finder(map_name):
+    if map_name:
+        map_list.remove(map_name)
+
+    map_name = map_list[random.randrange(0, len(map_list))]
+    print("RANDOM MAP: ", map_name)
+    try:
+        map = maps.get(map_name)
+        print("GOT THIS MAP: ", map_name)
+        return map
+    except KeyError:
+        map_finder(map_name)
+
+
+map = map_finder(None)
+print("FINAL MAP: ", map)
 
 
 def main():
-    run_game(maps.get(map_name), [
+    run_game(maps.get(map), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        Computer(Race.Protoss, Difficulty.Hard),
-        # Human(Race.Protoss),
-    ], realtime=True)
+        Computer(Race.Protoss, Difficulty.Hard)
+        # Human(Race.Protoss)
+        ], realtime=True)
 
 
 if __name__ == "__main__":
