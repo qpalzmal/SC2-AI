@@ -472,7 +472,7 @@ map_list = ["(2)16-BitLE",
 
 
 def map_finder(map_name):
-    if map_name:
+    if map_name and len(map_list) > 1:
         map_list.remove(map_name)
 
     map_name = map_list[random.randrange(0, len(map_list))]
@@ -482,15 +482,12 @@ def map_finder(map_name):
         print("GOT THIS MAP: ", map_name)
         return map
     except KeyError:
-        map_finder(map_name)
-
-
-map = map_finder(None)
-print("FINAL MAP: ", map)
+        print("MISSING MAP: ", map_name)
+        return map_finder(map_name)
 
 
 def main():
-    run_game(maps.get(map), [
+    run_game(map_finder(None), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
         Computer(Race.Protoss, Difficulty.Hard)
         # Human(Race.Protoss)
