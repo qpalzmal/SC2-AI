@@ -7,6 +7,8 @@ import numpy as np
 import random
 import time
 import keras
+import sys
+import pprint
 
 HEADLESS = False
 
@@ -460,22 +462,27 @@ class Protoss_Death_Ball(sc2.BotAI):
             self.train_data.append([y, self.flipped])
 
 
-# ---- implement a map name searcher with try-except ----
-have_map = False
-
-map_list = ["(2)16-BitLE",
-            "(2)AcidPlantLE",
-            "(2)CatalystLE",
-            "(2)DreamcatcherLE",
-            "(2)LostandFoundLE",
-            "(2)RedshiftLE"]
+# reads from a file contains names of maps and appends them to a map list
+map_list = []
+map_file = open("Maps.txt")
+for line in map_file:
+    map_list.append(line)
+map_file.close()
+pprint.pprint(map_list)
 
 
+# function used to get a random map, check if the user has it, then returns that map
 def map_finder(map_name):
-    if map_name and len(map_list) > 1:
+    temp_map = map_list[random.randrange(0, len(map_list))]
+    if map_name and len(map_list) > 1 or temp_map == map_name:
         map_list.remove(map_name)
 
-    map_name = map_list[random.randrange(0, len(map_list))]
+    try:
+        map_name = map_list[random.randrange(0, len(map_list))]
+    except ValueError:
+        print("You don't have any maps the AI can play on")
+        sys.exit(1)
+
     print("RANDOM MAP: ", map_name)
     try:
         map = maps.get(map_name)
@@ -486,10 +493,16 @@ def map_finder(map_name):
         return map_finder(map_name)
 
 
+# generates a random race for the computer opponent
+race_list = [Race.Protoss, Race.Zerg, Race.Terran]
+random_race = random.randrange(0, len(race_list))
+
+
+# enters map, list of players, and gamespeed
 def main():
     run_game(map_finder(None), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        Computer(Race.Protoss, Difficulty.Hard)
+        Computer(random_race, Difficulty.Hard)
         # Human(Race.Protoss)
         ], realtime=True)
 
