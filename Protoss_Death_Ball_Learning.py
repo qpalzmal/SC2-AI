@@ -7,6 +7,7 @@ import numpy as np
 import random
 import time
 import keras
+import pprint
 
 HEADLESS = False
 
@@ -460,15 +461,20 @@ class Protoss_Death_Ball(sc2.BotAI):
             self.train_data.append([y, self.flipped])
 
 
-# ---- implement a map name searcher with try-except ----
-map_list = ["(2)16-BitLE",
-            "(2)AcidPlantLE",
-            "(2)CatalystLE",
-            "(2)DreamcatcherLE",
-            "(2)LostandFoundLE",
-            "(2)RedshiftLE"]
-
-map_name = map_list[random.randrange(0, len(map_list))]
+# receives a list of map names to be played on from a file
+map_file = open("Maps.txt")
+map_list = []
+for line in map_file:
+    map_name = ""
+    # print("Line Length", len(line))
+    # creates new map name but excludes the "n" in "\n"
+    # last map on the file should have a empty line afterwards or the map name will cut off
+    for character in line[len(line) - 1]:
+        map_name += character
+    # print("Map Name:", map_name)
+    map_list.append(map_name)
+map_file.close()
+pprint.pprint(map_list)
 
 
 def main():
