@@ -466,9 +466,32 @@ class Protoss_Death_Ball(sc2.BotAI):
 map_list = []
 map_file = open("Maps.txt")
 for line in map_file:
-    map_list.append(line)
+    word = ""
+    for character in line:
+        if character == "\\":
+            break
+        else:
+            word += character
+            # print(word)
+    print(word)
+    map_list.append(word)
+
 map_file.close()
 pprint.pprint(map_list)
+
+# removes the "\n" from each line so map name will be correct
+# fixed_map_list = []
+# for map in map_list:
+#     word = ""
+#     for character in map:
+#         if character == "\\":
+#             break
+#         else:
+#             word += character
+#             print(word)
+#     print("WORDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", word)
+#     fixed_map_list.append(word)
+# pprint.pprint(fixed_map_list)
 
 
 # function used to get a random map, check if the user has it, then returns that map
@@ -483,13 +506,13 @@ def map_finder(map_name):
         print("You don't have any maps the AI can play on")
         sys.exit(1)
 
-    print("RANDOM MAP: ", map_name)
+    # print("RANDOM MAP: ", map_name)
     try:
         map = maps.get(map_name)
-        print("GOT THIS MAP: ", map_name)
+        # print("GOT THIS MAP: ", map_name)
         return map
     except KeyError:
-        print("MISSING MAP: ", map_name)
+        # print("MISSING MAP: ", map_name)
         return map_finder(map_name)
 
 
