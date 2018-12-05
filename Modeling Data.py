@@ -37,7 +37,7 @@ model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy
 # saves logging data
 tensorboard = TensorBoard(log_dir="logs/stage1")
 
-training_data_dir = "Training Data"
+training_data_dir = "Training Data Old"
 
 
 # gets lengths of all lists and returns it
