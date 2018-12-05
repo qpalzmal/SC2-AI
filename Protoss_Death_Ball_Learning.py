@@ -467,15 +467,11 @@ map_list = []
 map_file = open("Maps.txt")
 for line in map_file:
     word = ""
-    for character in line:
-        if character == "\\":
-            break
-        else:
-            word += character
-            # print(word)
+    for character in line[len(line) - 1]:
+        word += character
+        # print(word)
     print(word)
     map_list.append(word)
-
 map_file.close()
 pprint.pprint(map_list)
 
