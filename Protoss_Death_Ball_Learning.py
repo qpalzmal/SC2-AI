@@ -356,7 +356,7 @@ class Protoss_Death_Ball(sc2.BotAI):
                     if self.units(structure).ready and self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
                          and self.units(structure).noqueue is False and self.built_first_pylon:
                         await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(structure).first))
-                        # await self.chat_send("Chronoing stuff")
+                        await self.chat_send("Chronoing stuff")
 
     # makes units
     async def build_army(self):
@@ -434,7 +434,7 @@ class Protoss_Death_Ball(sc2.BotAI):
                     # if self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
                     #     await self.do(robo.train(COLOSSUS))
                     if self.can_afford(COLOSSUS):
-                        await self.do(robo.train(COLOSSUS)
+                        await self.do(robo.train(COLOSSUS))
                     # await self.chat_send("Building Colossus")
 
     async def command_army(self, iteration):
@@ -499,12 +499,12 @@ for line in map_file:
     # print("FINAL WORD", word)
     map_list.append(word)
 map_file.close()
-pprint.pprint(map_list)
+# pprint.pprint(map_list)
 
 
 # function used to get a random map, check if the user has it, then returns that map
 def map_finder(map_name):
-    # used to remove a map the user doesn't have it
+    # used to remove a map the user doesn't have
     temp_map = map_list[random.randrange(0, len(map_list))]
     if map_name and len(map_list) > 1 or temp_map == map_name:
         map_list.remove(map_name)
@@ -520,24 +520,25 @@ def map_finder(map_name):
     # print("RANDOM MAP: ", map_name)
     try:
         map = maps.get(map_name)
-        # print("GOT THIS MAP: ", map_name)
+        print("GOT THIS MAP: ", map_name)
         return map
     except KeyError:
-        # print("MISSING MAP: ", map_name)
+        print("MISSING MAP: ", map_name)
         return map_finder(map_name)
 
 
 # generates a random race for the computer opponent
-race_list = [Race.Protoss, Race.Zerg, Race.Terran, Race.Random]
+race_list = [Race.Protoss, Race.Zerg, Race.Terran]
+# random race might be replaceable by Race.Random
 random_race = random.randrange(0, len(race_list))
 
 
 # enters map, list of players, and game speed
 def main():
-    run_game(map_finder(None), [
+    run_game(map_finder(map_list[random.randrange(0, len(map_list))]), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
         Computer(Race.Random, Difficulty.Hard)
-        # Human(Race.Protoss)
+        # Human(Race.Random)
         ], realtime=True)
 
 

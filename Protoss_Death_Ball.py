@@ -3,6 +3,8 @@ from sc2 import run_game, maps, Race, Difficulty, position, Result
 from sc2.constants import *
 from sc2.player import Bot, Computer, Human
 import random
+import sys
+import pprint
 
 
 class Protoss_Death_Ball(sc2.BotAI):
@@ -215,62 +217,85 @@ class Protoss_Death_Ball(sc2.BotAI):
                 for structure in self.structures:
                     if self.units(structure).ready and self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
                          and self.units(structure).noqueue is False and self.built_first_pylon:
-                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
-                        # await self.chat_send("Chronoing stuff")
+                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, self.units(structure).first))
+                        await self.chat_send("Chronoing stuff")
 
-    # makes units
     async def build_army(self):
         if self.units(CYBERNETICSCORE).ready.exists:
             # gateway section
             for gateway in self.units(GATEWAY).ready.noqueue:
-                if self.built_natural:
-                    # queues all stalkers at same time from non queued up gateways
-                    gateway_count = self.units(GATEWAY).ready.noqueue.amount
-                    if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
-                        # if self.can_afford(STALKER) and self.supply_left >= 2:
-                            await self.do(gateway.train(STALKER))
-                            # await self.chat_send("GATEWAY Stalkers")
+                # ONE ROUND OF PRODUCTION
+                # if self.built_natural:
+                #     # queues all stalkers at same time from non queued up gateways
+                #     gateway_count = self.units(GATEWAY).ready.noqueue.amount
+                #     if self.minerals >= gateway_count * 125 and self.vespene >= gateway_count * 50:
+                #         # if self.can_afford(STALKER) and self.supply_left >= 2:
+                #             await self.do(gateway.train(STALKER))
+                #             # await self.chat_send("GATEWAY Stalkers")
 
                 # CONSTANT PRODUCTION
-                # if self.can_afford(STALKER):
-                #     await self.do_actions(gateway.train(STALKER))
+                if self.can_afford(STALKER):
+                    await self.do_actions(gateway.train(STALKER))
 
             # warpgate section
             if self.units(WARPGATE).ready.exists and self.built_natural:
-                warpgate_count = self.units(WARPGATE).ready.amount
+                # warpgate_count = self.units(WARPGATE).ready.amount
+
                 for warpgate in self.units(WARPGATE).ready:
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        if self.supply_left >= 2 and self.minerals >= warpgate_count * 125\
-                                and self.vespene >= warpgate_count * 50:
-                            # gets initial position for stalker warp-in then moves with a placements step for next warps
-                            position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
-                            placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
-                            if placement:
+                        # gets initial position for stalker warp-in then moves with a placements step for next warps
+                        if self.supply_left >= 2:
+                            # ONE ROUND OF PRODUCTION
+                            # if self.minerals >= len(self.units(WARPGATE).ready) * 125\
+                            #  and self.vespene >= warpgate_count * 50:
+                            #     position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                            #     placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
+                            #     if placement is None:
+                            #         break
+                            #     await self.do(warpgate.warp_in(STALKER, placement))
+                            #     # await self.chat_send("WARPGATE STALKER")
+
+                            # CONSTANT PRODUCTION
+                            if self.can_afford(STALKER):
+                                position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                                placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
+                                if placement is None:
+                                    break
                                 await self.do(warpgate.warp_in(STALKER, placement))
                                 # await self.chat_send("WARPGATE STALKER")
 
         # creates observers/immortal/colossus from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
+                # robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+
                 # queues up all observers at same time from non queued robos
-                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
                 # always makes 1 observers
-                if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
-                        and self.units(OBSERVER).amount < 2:
-                    await self.do(robo.train(OBSERVER))
+                if self.supply_left >= 1 and self.units(OBSERVER).amount < 2:
+                    # ONE ROUND OF PRODUCTION
+                    # if self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75:
+                    #     await self.do(robo.train(OBSERVER))
+
+                    # CONSTANT PRODUCTION
+                    if self.can_afford(OBSERVER):
+                        await self.do(robo.train(OBSERVER))
 
                 # queues up all immortals at same time from non queued robos
                 # keeps a 2:1 ratio of immortals to colossus
-                if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100 \
-                        and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
-                    await self.do(robo.train(IMMORTAL))
+                if self.supply_left >= 4 and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
+                    # if self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100:
+                    #     await self.do(robo.train(IMMORTAL))
                     # await self.chat_send("Building Immortal")
+                    if self.can_afford(IMMORTAL):
+                        await self.do(robo.train(IMMORTAL))
 
                 # queues up all colo at same time fron non queued robos
-                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
-                if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
-                    await self.do(robo.train(COLOSSUS))
+                if self.supply_left >= 6:
+                    # if self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
+                    #     await self.do(robo.train(COLOSSUS))
+                    if self.can_afford(COLOSSUS):
+                        await self.do(robo.train(COLOSSUS))
                     # await self.chat_send("Building Colossus")
 
     async def command_army(self, iteration):
@@ -303,22 +328,59 @@ class Protoss_Death_Ball(sc2.BotAI):
                             await self.do(unit.attack(target))
 
 
-# ---- implement a map name searcher with try-except ----
-map_list = ["(2)16-BitLE",
-            "(2)AcidPlantLE",
-            "(2)CatalystLE,"
-            "(2)DreamcatcherLE",
-            "(2)LostandFoundLE",
-            "(2)RedshiftLE"]
+# reads from a file contains names of maps and appends them to a map list
+map_list = []
+map_file = open("Maps.txt")
+for line in map_file:
+    word = ""
+    # removes the "n" from "\n" at every line
+    # the last map on the file needs to have a blank line after or the last letter will cut off
+    for character in line[:len(line) - 1]:
+        # print("CHARACTER", character)
+        word += character
+        # print("WORD IN PROGRESS", word)
+    # print("FINAL WORD", word)
+    map_list.append(word)
+map_file.close()
+# pprint.pprint(map_list)
 
-map_name = map_list[random.randrange(0, len(map_list))]
+
+# function used to get a random map, check if the user has it, then returns that map
+def map_finder(map_name):
+    # used to remove a map the user doesn't have it
+    temp_map = map_list[random.randrange(0, len(map_list))]
+    if map_name and len(map_list) > 1 or temp_map == map_name:
+        map_list.remove(map_name)
+
+    # tries to get a random map from the list if error then user has none of the maps AI can play on
+    try:
+        map_name = map_list[random.randrange(0, len(map_list))]
+    except ValueError:
+        print("You don't have any maps the AI can play on")
+        sys.exit(1)
+
+    # recursion to see if the user has the map generated
+    # print("RANDOM MAP: ", map_name)
+    try:
+        map = maps.get(map_name)
+        print("GOT THIS MAP: ", map_name)
+        return map
+    except KeyError:
+        print("MISSING MAP: ", map_name)
+        return map_finder(map_name)
+
+
+# generates a random race for the computer opponent
+race_list = [Race.Protoss, Race.Zerg, Race.Terran]
+# random race might be replaceable by Race.Random
+random_race = random.randrange(0, len(race_list))
 
 
 def main():
-    run_game(maps.get(map_name), [
+    run_game(map_finder(map_list[random.randrange(0, len(map_list))]), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        # Computer(Race.Protoss, Difficulty.Hard)
-        Human(Race.Protoss)
+        # Computer(Race.Random, Difficulty.Hard)
+        Human(Race.Random)
     ], realtime=True)
 
 
