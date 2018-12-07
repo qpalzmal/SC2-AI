@@ -370,12 +370,6 @@ def map_finder(map_name):
         return map_finder(map_name)
 
 
-# generates a random race for the computer opponent
-race_list = [Race.Protoss, Race.Zerg, Race.Terran]
-# random race might be replaceable by Race.Random
-random_race = random.randrange(0, len(race_list))
-
-
 def main():
     run_game(map_finder(map_list[random.randrange(0, len(map_list))]), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
