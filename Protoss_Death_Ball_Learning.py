@@ -7,6 +7,7 @@ import numpy as np
 import random
 import time
 import keras
+import sys
 import pprint
 
 HEADLESS = False
@@ -39,14 +40,16 @@ class Protoss_Death_Ball(sc2.BotAI):
 
         # forge upgrades -- index priority
         self.upgrade_list = [
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL2,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL3,
+
             AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
-            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2,
+            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
+
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1,
-            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2,
-            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2,
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2,
-            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
-            AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3,
             AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3
         ]
 
@@ -142,7 +145,7 @@ class Protoss_Death_Ball(sc2.BotAI):
 
         # sends observer to enemy base
         for observer in self.units(OBSERVER).idle:
-            await self.do_actions(observer.move(self.enemy_start_locations[0]))
+            await self.do(observer.move(self.enemy_start_locations[0]))
 
     async def intel(self):
         # arrays are y - x images are x - y so flip array to image
@@ -285,7 +288,7 @@ class Protoss_Death_Ball(sc2.BotAI):
     async def build_tech(self):
         # builds 1 gate if on 1 nexus then up to 3 per nexus at 2 nexus and up
         if self.units(PYLON).ready.exists and self.can_afford(GATEWAY) and self.units(NEXUS).ready:
-            if self.built_natural and self.units(NEXUS).amount - self.units(GATEWAY).amount > -2:
+            if self.built_natural and self.units(NEXUS).amount - self.units(GATEWAY).amount > -1:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
             elif self.units(GATEWAY).amount < 1:
                 await self.build(GATEWAY, near=self.units(PYLON).ready.random, max_distance=6)
@@ -313,22 +316,24 @@ class Protoss_Death_Ball(sc2.BotAI):
 
     async def research_upgrades(self):
         # researches warpgate
-        if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
-            await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
-            # await self.chat_send("Researching Warpgate")
+        abilities = self.get_available_abilities(self.units(CYBERNETICSCORE).ready.noqueue)
+        if RESEARCH_WARPGATE in abilities:
+            if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
+                await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+                # await self.chat_send("Researching Warpgate")
 
         # researches blink
-        if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
-            await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
+        # if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
+        #     await self.do(self.units(TWILIGHTCOUNCIL).ready.first(RESEARCH_BLINK))
             # await self.chat_send("Researching Blink")
 
         # researches thermal lance
-        if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
-            await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
+        # if self.units(ROBOTICSBAY).ready and self.can_afford(RESEARCH_THERMALLANCE) and self.units(NEXUS).amount == 3:
+        #     await self.do(self.units(ROBOTICSBAY).ready.first(RESEARCH_THERMALLANCE))
             # await self.chat_send("Researching Thermal Lance")
 
         # researches weapon, armor, shield in that order
-        if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue:
+        if self.units(FORGE).ready and self.built_natural and self.units(FORGE).noqueue and self.supply_used >= 75:
             forge = self.units(FORGE).ready.first
             abilities = await self.get_available_abilities(forge)
             for upgrade in range(len(self.upgrade_list)):
@@ -353,15 +358,18 @@ class Protoss_Death_Ball(sc2.BotAI):
             if AbilityId.EFFECT_CHRONOBOOST in abilities:
                 for structure in self.structures:
                     if self.units(structure).ready and self.can_afford(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST) \
-                         and self.units(structure).noqueue is False and self.built_first_pylon:
-                        await self.do(nexus(AbilityId.EFFECT_CHRONOBOOST, self.units(structure).first))
-                        # await self.chat_send("Chronoing stuff")
+                         and self.units(structure).noqueue is False and self.built_first_pylon\
+                            and not structure.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
+                        await self.do(nexus(BuffId.CHRONOBOOSTENERGYCOST, self.units(structure).first))
+
+                        await self.chat_send("Chronoing stuff")
 
     # makes units
     async def build_army(self):
         if self.units(CYBERNETICSCORE).ready.exists:
             # gateway section
             for gateway in self.units(GATEWAY).ready.noqueue:
+                # ONE ROUND OF PRODUCTION
                 if self.built_natural:
                     # queues all stalkers at same time from non queued up gateways
                     gateway_count = self.units(GATEWAY).ready.noqueue.amount
@@ -371,46 +379,74 @@ class Protoss_Death_Ball(sc2.BotAI):
                             # await self.chat_send("GATEWAY Stalkers")
 
                 # CONSTANT PRODUCTION
-                # if self.can_afford(STALKER):
-                #     await self.do_actions(gateway.train(STALKER))
+                # if self.can_afford(STALKER) and self.supply_left >= 2:
+                #     await self.do(gateway.train(STALKER))
 
             # warpgate section
             if self.units(WARPGATE).ready.exists and self.built_natural:
                 warpgate_count = self.units(WARPGATE).ready.amount
+
                 for warpgate in self.units(WARPGATE).ready:
                     abilities = await self.get_available_abilities(warpgate)
                     if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                        if self.supply_left >= 2 and self.minerals >= len(self.units(WARPGATE).ready) * 125\
-                                and self.vespene >= warpgate_count * 50:
-                            # gets initial position for stalker warp-in then moves with a placements step for next warps
-                            position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
-                            placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
-                            if placement is None:
-                                break
-                            await self.do(warpgate.warp_in(STALKER, placement))
-                            # await self.chat_send("WARPGATE STALKER")
+                        # gets initial position for stalker warp-in then moves with a placements step for next warps
+                        if self.supply_left >= 2:
+                            # ONE ROUND OF PRODUCTION
+                            if self.minerals >= len(self.units(WARPGATE).ready) * 125\
+                             and self.vespene >= warpgate_count * 50:
+                                position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                                placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
+                                if placement is None:
+                                    break
+                                await self.do(warpgate.warp_in(STALKER, placement))
+                            #     # await self.chat_send("WARPGATE STALKER")
+
+                            # CONSTANT PRODUCTION
+                            # if self.can_afford(STALKER):
+                            #     position = self.units(PYLON).ready.random.position.to2.random_on_distance(4)
+                            #     placement = await self.find_placement(WARPGATETRAIN_STALKER, position, placement_step=2)
+                            #     if placement is None:
+                            #         break
+                            #     await self.do(warpgate.warp_in(STALKER, placement))
+                                # await self.chat_send("WARPGATE STALKER")
 
         # creates observers/immortal/colossus from robos
         if self.units(ROBOTICSFACILITY).ready.exists:
             for robo in self.units(ROBOTICSFACILITY).ready.noqueue:
-                # queues up all observers at same time from non queued robos
                 robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
+
+                # queues up all observers at same time from non queued robos
                 # always makes 1 observers
-                if self.supply_left >= 1 and self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75 \
-                        and self.units(OBSERVER).amount < 2:
-                    await self.do(robo.train(OBSERVER))
+                if self.supply_left >= 1 and self.units(OBSERVER).amount < 2:
+                    # ONE ROUND OF PRODUCTION
+                    if self.minerals >= robo_count * 25 and self.vespene >= robo_count * 75:
+                        await self.do(robo.train(OBSERVER))
+
+                    # CONSTANT PRODUCTION
+                    # if self.can_afford(OBSERVER):
+                    #     await self.do(robo.train(OBSERVER))
 
                 # queues up all immortals at same time from non queued robos
                 # keeps a 2:1 ratio of immortals to colossus
-                if self.supply_left >= 4 and self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100 \
-                        and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
-                    await self.do(robo.train(IMMORTAL))
+                if self.supply_left >= 4 and int(self.units(IMMORTAL).amount / 2) <= self.units(COLOSSUS).amount:
+                    # ONE ROUND OF PRODUCTION
+                    if self.minerals >= robo_count * 250 and self.vespene >= robo_count * 100:
+                        await self.do(robo.train(IMMORTAL))
                     # await self.chat_send("Building Immortal")
 
+                    # CONSTANT PRODUCTION
+                    # if self.can_afford(IMMORTAL):
+                    #     await self.do(robo.train(IMMORTAL))
+
                 # queues up all colo at same time fron non queued robos
-                robo_count = self.units(ROBOTICSFACILITY).ready.noqueue.amount
-                if self.supply_left >= 6 and self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
-                    await self.do(robo.train(COLOSSUS))
+                if self.supply_left >= 6:
+                    # ONE ROUND OF PRODUCTION
+                    if self.minerals >= robo_count * 300 and self.vespene >= robo_count * 200:
+                        await self.do(robo.train(COLOSSUS))
+
+                    # CONSTANT PRODUCTION
+                    # if self.can_afford(COLOSSUS):
+                    #     await self.do(robo.train(COLOSSUS))
                     # await self.chat_send("Building Colossus")
 
     async def command_army(self, iteration):
@@ -447,7 +483,7 @@ class Protoss_Death_Ball(sc2.BotAI):
 
             # attacks the enemy start location
             elif choice == 3:
-                target = self.enemy_start_locations[0]
+                target = self.enemy_start_locations[random.randrange(0, len(self.enemy_start_locations))]
 
             if target:
                 for unit_type in self.unit_type:
@@ -461,28 +497,55 @@ class Protoss_Death_Ball(sc2.BotAI):
             self.train_data.append([y, self.flipped])
 
 
-# receives a list of map names to be played on from a file
-map_file = open("Maps.txt")
+# reads from a file contains names of maps and appends them to a map list
 map_list = []
+map_file = open("TEST MAPS.txt")
 for line in map_file:
-    map_name = ""
-    # print("Line Length", len(line))
-    # creates new map name but excludes the "n" in "\n"
-    # last map on the file should have a empty line afterwards or the map name will cut off
-    for character in line[len(line) - 1]:
-        map_name += character
-    # print("Map Name:", map_name)
-    map_list.append(map_name)
+    word = ""
+    # removes the "n" from "\n" at every line
+    # the last map on the file needs to have a blank line after or the last letter will cut off
+    for character in line[:len(line) - 1]:
+        # print("CHARACTER", character)
+        word += character
+        # print("WORD IN PROGRESS", word)
+    # print("FINAL WORD", word)
+    map_list.append(word)
 map_file.close()
-pprint.pprint(map_list)
+# pprint.pprint(map_list)
 
 
+# function used to get a random map, check if the user has it, then returns that map
+def map_finder(map_name):
+    # used to remove a map the user doesn't have
+    temp_map = map_list[random.randrange(0, len(map_list))]
+    if map_name and len(map_list) > 1 or temp_map == map_name:
+        map_list.remove(map_name)
+
+    # tries to get a random map from the list if error then user has none of the maps AI can play on
+    try:
+        map_name = map_list[random.randrange(0, len(map_list))]
+    except ValueError:
+        print("You don't have any maps the AI can play on")
+        sys.exit(1)
+
+    # recursion to see if the user has the map generated
+    print("RANDOM MAP: ", map_name)
+    try:
+        map = maps.get(map_name)
+        print("GOT THIS MAP: ", map_name)
+        return map
+    except KeyError:
+        print("MISSING MAP: ", map_name)
+        return map_finder(map_name)
+
+
+# enters map, list of players, and game speed
 def main():
-    run_game(maps.get(map_name), [
+    run_game(map_finder(map_list[random.randrange(0, len(map_list))]), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        Computer(Race.Protoss, Difficulty.Hard),
-        # Human(Race.Protoss),
-    ], realtime=True)
+        Computer(Race.Random, Difficulty.Medium)
+        # Human(Race.Random)
+        ], realtime=False)
 
 
 if __name__ == "__main__":
