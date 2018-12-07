@@ -342,11 +342,11 @@ class Protoss_Death_Ball(sc2.BotAI):
                     # await self.chat_send("Researching Forge Upgrade")
 
     # transforms the gateways to warpgates
-    async def transform_gateways(self):
-        for gateway in self.units(GATEWAY).ready:
-            abilities = await self.get_available_abilities(gateway)
-            if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_WARPGATE):
-                await self.do(gateway(MORPH_WARPGATE))
+    # async def transform_gateways(self):
+    #     for gateway in self.units(GATEWAY).ready:
+    #         abilities = await self.get_available_abilities(gateway)
+    #         if AbilityId.MORPH_WARPGATE in abilities and self.can_afford(AbilityId.MORPH_WARPGATE):
+    #             await self.do(gateway(MORPH_WARPGATE))
                 # await self.chat_send("Transforming Gateways")
 
     # chronos structures
