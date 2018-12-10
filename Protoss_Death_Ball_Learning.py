@@ -128,7 +128,7 @@ class Protoss_Death_Ball(sc2.BotAI):
         await self.build_supply()
         await self.chronoboost()
         await self.build_assimilator()
-        await self.transform_gateways()
+        # await self.transform_gateways()
         await self.build_army()
         await self.command_army(iteration)
 
@@ -316,11 +316,12 @@ class Protoss_Death_Ball(sc2.BotAI):
 
     async def research_upgrades(self):
         # researches warpgate
-        abilities = self.get_available_abilities(self.units(CYBERNETICSCORE).ready.noqueue)
-        if RESEARCH_WARPGATE in abilities:
-            if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
-                await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
-                # await self.chat_send("Researching Warpgate")
+        if self.units(CYBERNETICSCORE).ready.amount >= 1:
+            abilities = await self.get_available_abilities(self.units(CYBERNETICSCORE).ready.noqueue)
+            if AbilityId.RESEARCH_WARPGATE in abilities:
+                if self.units(CYBERNETICSCORE).ready.noqueue and self.can_afford(RESEARCH_WARPGATE):
+                    await self.do(self.units(CYBERNETICSCORE).ready.first(RESEARCH_WARPGATE))
+                    # await self.chat_send("Researching Warpgate")
 
         # researches blink
         # if self.units(TWILIGHTCOUNCIL).ready and self.can_afford(RESEARCH_BLINK) and self.built_natural:
@@ -543,7 +544,7 @@ def map_finder(map_name):
 def main():
     run_game(map_finder(map_list[random.randrange(0, len(map_list))]), [
         Bot(Race.Protoss, Protoss_Death_Ball()),
-        Computer(Race.Random, Difficulty.Medium)
+        Computer(Race.Random, Difficulty.Easy)
         # Human(Race.Random)
         ], realtime=False)
 
