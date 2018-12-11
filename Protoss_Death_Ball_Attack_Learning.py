@@ -500,7 +500,7 @@ class Protoss_Death_Ball(sc2.BotAI):
 
 # reads from a file contains names of maps and appends them to a map list
 map_list = []
-map_file = open("TEST MAPS.txt")
+map_file = open("Maps.txt")
 for line in map_file:
     word = ""
     # removes the "n" from "\n" at every line
@@ -546,7 +546,7 @@ def main():
         Bot(Race.Protoss, Protoss_Death_Ball()),
         Computer(Race.Random, Difficulty.Easy)
         # Human(Race.Random)
-        ], realtime=False)
+        ], realtime=True)
 
 
 if __name__ == "__main__":
