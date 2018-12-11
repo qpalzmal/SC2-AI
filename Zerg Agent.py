@@ -19,7 +19,7 @@ def main(unused_argv):
         while True:
             with sc2_env.SC2Env(
                     # passes in a map to play on
-                    map_name="CollectMineralShards",
+                    map_name="AbyssalReef",
                     # passes a list of players
                     players=[sc2_env.Agent(sc2_env.Race.zerg),
                              sc2_env.Bot(sc2_env.Race.random, sc2_env.Difficulty.very_easy)],
