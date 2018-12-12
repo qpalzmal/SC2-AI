@@ -6,19 +6,45 @@ import random
 
 
 class ZergAgent(base_agent.BaseAgent):
+    def unit_type_is_selected(self, obs, unit_type):
+        # if something is selected and checks to see if the first selecting thing is same as passed unit type
+        if len(obs.observation.single_select) > 0 and obs.observation.single_select[0].unit_type == unit_type or \
+                len(obs.observation.multi_select) > 0 and obs.observation.multi_select[0].unit_type == unit_type:
+            return True
+
+        return False
+
+    def get_units_by_type(self, obs, unit_type):
+        units = []
+        for unit in obs.observation.feature_units:
+            if unit.unit_type == unit_type:
+                units.append(unit)
+        return units
+
     # step() is similar to on_step() from sc2 library
     def step(self, obs):
         super(ZergAgent, self).step(obs)
 
+        # checks if agent meets all criteria to build a spawning pool and only builds 1 spawning pool
+        spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
+        if len(spawning_pools) == 0:
+            if self.unit_type_is_selected(obs, units.Zerg.Drone):
+                if actions.FUNCTIONS.Build_SpawningPool_screen.id in obs.observation.available_actions:
+                    x = random.randint(0, 83)
+                    y = random.randint(0, 83)
+                    return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+
         # gets all units then adds them to the drones list if that unit is a drone
-        drones = [unit for unit in obs.observation.feature_units
-                  if unit.unit_type == units.Zerg.Drone]
-        
+        drones = self.get_units_by_type(obs, units.Zerg.Drone)
+        if len(drones) > 0:
+            drone = random.choice(drones)
+            # "select_all_type" works like ctrl clicking and drone's (x,y) is passed
+            return actions.FUNCTIONS.select_point("select_all_type", (drone.x, drone.y))
 
         return actions.FUNCTIONS.no_op()
 
 
-def main(unused_argv):
+def main():
     agent = ZergAgent()
     try:
         while True:
