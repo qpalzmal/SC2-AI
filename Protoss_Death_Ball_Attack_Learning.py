@@ -25,7 +25,7 @@ class Protoss_Death_Ball(sc2.BotAI):
         self.train_data = []
 
         # army composition
-        self.unit_type = [STALKER, IMMORTAL, COLOSSUS, OBSERVER]
+        self.unit_type = [STALKER, IMMORTAL, COLOSSUS]
 
         # list containing structures to chrono boost -- top bottom priority
         self.structures = [

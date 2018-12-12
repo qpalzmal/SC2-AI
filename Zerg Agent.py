@@ -10,6 +10,11 @@ class ZergAgent(base_agent.BaseAgent):
     def step(self, obs):
         super(ZergAgent, self).step(obs)
 
+        # gets all units then adds them to the drones list if that unit is a drone
+        drones = [unit for unit in obs.observation.feature_units
+                  if unit.unit_type == units.Zerg.Drone]
+        
+
         return actions.FUNCTIONS.no_op()
 
 
