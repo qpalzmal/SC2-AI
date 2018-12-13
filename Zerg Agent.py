@@ -62,19 +62,28 @@ class ZergAgent(base_agent.BaseAgent):
                     y = random.randint(0, 83)
                     return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
 
+        # creates 1 roach warren if all criteria met
+        roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
+        if len(roach_warren) == 0:
+            if self.unit_type_is_selected(obs, units.Zerg.RoachWarren) \
+             and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
+                x = random.randint(0, 83)
+                y = random.randint(0, 83)
+                return actions.FUNCTIONS.Build_RoachWarren_screen("now", (x, y))
+
         # creates zerglings if all criteria met
         if self.unit_type_is_selected(obs, units.Zerg.Larva) \
-                and self.can_do(obs, actions.FUNCTIONS.Train_Zergling_quick.id):
-            return actions.FUNCTIONS.Train_Zergling_quick("now")
+                and self.can_do(obs, actions.FUNCTIONS.Train_Roach_quick.id):
+            return actions.FUNCTIONS.Train_Roach_quick("now")
 
-        # attack with zerglings
-        zerglings = self.get_units_by_type(obs, units.Zerg.Zergling)
-        if len(zerglings) > 20:
-            # attacks with all zerglings if they are selected
-            if self.unit_type_is_selected(obs, units.Zerg.Zergling) \
+        # attack with roaches
+        roaches = self.get_units_by_type(obs, units.Zerg.Roach)
+        if len(roaches) > 10:
+            # attacks with all roaches if they are selected
+            if self.unit_type_is_selected(obs, units.Zerg.Roach) \
              and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
                 return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
-            # select the zerglings since they aren't selected
+            # select the roaches since they aren't selected
             if self.can_do(obs, actions.FUNCTIONS.select_army.id):
                 return actions.FUNCTIONS.select_army("select")
 
