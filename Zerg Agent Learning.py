@@ -31,8 +31,6 @@ _NOT_QUEUED = [0]
 _QUEUED = [1]
 
 
-
-
 # Taken from https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
 # keeps track of all states and actions for agent to receive rewards/score for actions
 class QLearningTable:
@@ -78,6 +76,11 @@ class QLearningTable:
 
 
 class ZergAgent(base_agent.BaseAgent):
+    def __init__(self):
+        super(ZergAgent, self).__init__()
+
+        self.qlearn = QLearningTable(actions=list(range(len(smart_actions))))
+
     def transformLocation(self, x, x_distance, y, y_distance):
         if not self.base_top_left:
             return [x - x_distance, y - y_distance]
