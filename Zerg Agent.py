@@ -11,6 +11,18 @@ class ZergAgent(base_agent.BaseAgent):
 
         self.attack_coordinates = None
 
+        # list of actions for agent to do
+        self.smart_actions = ["donothing",2
+                              "selectdrone",2
+                              "trainoverlord",2
+                              "buildspawningpool",2
+                              "selectlarva",2
+                              "trainroach",
+                              "traindrone", # test if agent autotrains drones
+                              "selectarmy",2
+                              "attack",2
+                              "buildroachwarren"]2
+
     # checks if the current unit type is selected
     def unit_type_is_selected(self, obs, unit_type):
         # if something is selected and checks to see if the first selecting thing is same as passed unit type
@@ -37,6 +49,7 @@ class ZergAgent(base_agent.BaseAgent):
         super(ZergAgent, self).step(obs)
 
         # obs.first() checks if its first step
+        # hard coded to find the player start location - only tested on abyssalreef
         if obs.first():
             player_y, player_x = (obs.observation.feature_minimap.player_relative == features.PlayerRelative.SELF).nonzero()
 
@@ -48,59 +61,94 @@ class ZergAgent(base_agent.BaseAgent):
             else:
                 self.attack_coordinates = (12, 16)
 
+        #
+        smart_action = self.smart_actions[random.randrange(0, len(self.smart_actions))]
+
+
+        if smart_action == "donothing":
+            return actions.FUNCTIONS.no_op()
+
         # creates overlord if supply <= 4 and all criteria met
-        supply_left = obs.observation.player.food_cap - obs.observation.player.food_used
-        if supply_left <= 4 and self.can_do(obs, actions.FUNCTIONS.Train_Overlord_quick.id):
-                return actions.FUNCTIONS.Train_Overlord_quick("now")
+        elif smart_action == "trainoverlord":
+            self.select_larva()
+            supply_left = obs.observation.player.food_cap - obs.observation.player.food_used
+            if supply_left <= 4 and self.unit_type_is_selected(obs, units.Zerg.Larva) \
+              and self.can_do(obs, actions.FUNCTIONS.Train_Overlord_quick.id):
+                    return actions.FUNCTIONS.Train_Overlord_quick("now")
 
         # creates 1 spawning pool if all criteria met
-        spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
-        if len(spawning_pools) == 0:
-            if self.unit_type_is_selected(obs, units.Zerg.Drone) \
-             and self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
-                    x = random.randint(0, 83)
-                    y = random.randint(0, 83)
-                    return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+        elif smart_action == "buildspawningpool":
+            spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
+            if len(spawning_pools) == 0:
+                self.select_drone()
+                if self.unit_type_is_selected(obs, units.Zerg.Drone) \
+                 and self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
+                        x = random.randint(0, 83)
+                        y = random.randint(0, 83)
+                        return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
 
         # creates 1 roach warren if all criteria met
-        roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
-        if len(roach_warren) == 0:
-            if self.unit_type_is_selected(obs, units.Zerg.RoachWarren) \
-             and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
-                x = random.randint(0, 83)
-                y = random.randint(0, 83)
-                return actions.FUNCTIONS.Build_RoachWarren_screen("now", (x, y))
+        elif smart_action == "buildroachwarren":
+            roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
+            if len(roach_warren) == 0:
+                self.select_drone()
+                if self.unit_type_is_selected(obs, units.Zerg.RoachWarren) \
+                 and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
+                    x = random.randint(0, 83)
+                    y = random.randint(0, 83)
+                    return actions.FUNCTIONS.Build_RoachWarren_screen("now", (x, y))
 
-        # creates zerglings if all criteria met
-        if self.unit_type_is_selected(obs, units.Zerg.Larva) \
-                and self.can_do(obs, actions.FUNCTIONS.Train_Roach_quick.id):
-            return actions.FUNCTIONS.Train_Roach_quick("now")
+        # creates roaches if all criteria met
+        elif smart_action == "trainroach":
+            self.select_larva()
+            if self.unit_type_is_selected(obs, units.Zerg.Larva) \
+                    and self.can_do(obs, actions.FUNCTIONS.Train_Roach_quick.id):
+                return actions.FUNCTIONS.Train_Roach_quick("now")
 
         # attack with roaches
-        roaches = self.get_units_by_type(obs, units.Zerg.Roach)
-        if len(roaches) > 10:
-            # attacks with all roaches if they are selected
+        elif smart_action == "attack":
+            # roaches = self.get_units_by_type(obs, units.Zerg.Roach)
+            # if len(roaches) > 10:
+                # # select the roaches since they aren't selected
+                # if self.can_do(obs, actions.FUNCTIONS.select_army.id):
+                #     return actions.FUNCTIONS.select_army("select")
+                # attacks with all roaches if they are selected
             if self.unit_type_is_selected(obs, units.Zerg.Roach) \
              and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
                 return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
-            # select the roaches since they aren't selected
+
+        # selects the roaches
+        elif smart_action == "selectarmy":
+            # roaches = self.get_units_by_type(obs, units.Zerg.Roach)
+            # if len(roaches) > 10:
+                # attacks with all roaches if they are selected
+                # if self.unit_type_is_selected(obs, units.Zerg.Roach) \
+                #  and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
+                #     return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
+                # select the roaches since they aren't selected
             if self.can_do(obs, actions.FUNCTIONS.select_army.id):
                 return actions.FUNCTIONS.select_army("select")
 
         # selects random larva
+        elif smart_action == "selectlarva":
+            self.select_larva()
+
+        # selects random drone
+        elif smart_action == "selectdrone":
+            self.select_drone()
+
+    def select_larva(self):
         larvae = self.get_units_by_type(obs, units.Zerg.Larva)
         if len(larvae) > 0:
             larva = random.choice(larvae)
             return actions.FUNCTIONS.select_point("select_all_type", (larva.x, larva.y))
 
-        # selects random drone
+    def select_drone(self):
         drones = self.get_units_by_type(obs, units.Zerg.Drone)
         if len(drones) > 0:
             drone = random.choice(drones)
             # "select_all_type" works like ctrl clicking and drone's (x,y) is passed
             return actions.FUNCTIONS.select_point("select_all_type", (drone.x, drone.y))
-
-        return actions.FUNCTIONS.no_op()
 
 
 # main() requires a argument so put a placeholder that won't be used
