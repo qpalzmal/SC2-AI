@@ -103,7 +103,7 @@ class ZergAgent(base_agent.BaseAgent):
         if len(drones) > 0:
             drone = random.choice(drones)
             # "select_all_type" works like ctrl clicking and drone's (x,y) is passed
-            print("_____________________DRONE DETECTED___________________________________")
+            print("_____________________DRONE DETECTED BBAPER___________________________________")
             return actions.FUNCTIONS.select_point("select_all_type", (drone.x, drone.y))
 
     # step() is similar to on_step() from sc2 library
@@ -111,7 +111,7 @@ class ZergAgent(base_agent.BaseAgent):
         super(ZergAgent, self).step(obs)
 
         # obs.first() checks if its first step
-        # hard coded to find the player start location - only tested on abyssalreef
+        # hard coded to find the player start location - only works on abyssalreef
         if obs.first():
             player_y, player_x = (
                         obs.observation.feature_minimap.player_relative == features.PlayerRelative.SELF).nonzero()
@@ -142,15 +142,17 @@ class ZergAgent(base_agent.BaseAgent):
 
         # creates 1 spawning pool if all criteria met
         elif smart_action == "buildspawningpool":
+            print("_____________________________ME BUILD SPAWNING POOL________________________")
             spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
-            print("__________________________YOINK___________________________________________")
+            print("__________________________FEELSOKAYMAN___________________________________________")
             if len(spawning_pools) == 0:
+                print("__________________________FEELSAMAZINGMAN")
                 self.select_drone(obs)
-                print("__________________________REEEEEEEEEEEEEEEEEEEEEE___________________________________________")
+                print("__________________________FEELSWEIRDMAN___________________________________________")
                 if self.unit_type_is_selected(obs, units.Zerg.Drone):
-                    # print("__________________________MONKAS___________________________________________")
+                    print("__________________________MONKAS___________________________________________")
                     if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
-                        # print("__________________________PEPEGA___________________________________________")
+                        print("__________________________PEPEGA___________________________________________")
                         x = random.randint(0, 83)
                         y = random.randint(0, 83)
                         return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
@@ -159,7 +161,7 @@ class ZergAgent(base_agent.BaseAgent):
         elif smart_action == "buildroachwarren":
             roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
             if len(roach_warren) == 0:
-                # self.select_drone(obs)
+                self.select_drone(obs)
                 if self.unit_type_is_selected(obs, units.Zerg.RoachWarren) \
                         and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
                     x = random.randint(0, 83)
@@ -181,9 +183,19 @@ class ZergAgent(base_agent.BaseAgent):
             # if self.can_do(obs, actions.FUNCTIONS.select_army.id):
             #     return actions.FUNCTIONS.select_army("select")
             # attacks with all roaches if they are selected
-            if self.unit_type_is_selected(obs, units.Zerg.Roach) \
-                    and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
-                return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
+            roaches = self.get_units_by_type(obs, units.Zerg.Roach)
+            if self.unit_type_is_selected(obs, units.Zerg.Roach) and len(roaches)>= 10:
+                if self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
+                    return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
+            elif not self.unit_type_is_selected(
+                # selecting roaches + attack
+
+
+            )
+            if len(roaches) >= 10:
+                if self.unit_type_is_selected(obs, units.Zerg.Roach) \
+                        and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
+                    return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
 
         # selects the roaches
         elif smart_action == "selectarmy":
