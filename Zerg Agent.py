@@ -68,7 +68,8 @@ class ZergAgent(base_agent.BaseAgent):
                               "traindrone",  # test if agent autotrains drones
                               "selectarmy",
                               "attack",
-                              "buildroachwarren"]
+                              "buildroachwarren",
+                              "buildextractor"]
 
         self.qlearn = QLearningTable(actions=list(range(len(self.smart_actions))))
 
@@ -83,9 +84,11 @@ class ZergAgent(base_agent.BaseAgent):
     # returns a list of all units of that type
     def get_units_by_type(self, obs, unit_type):
         units = []
+        # print("GET UNITS IS CALLED")
         for unit in obs.observation.feature_units:
             if unit.unit_type == unit_type:
                 units.append(unit)
+        # print("ME RETURN LIST OF UNITS")
         return units
 
     # checks if the agent meets all criteria to do the given action
@@ -99,11 +102,12 @@ class ZergAgent(base_agent.BaseAgent):
             return actions.FUNCTIONS.select_point("select_all_type", (larva.x, larva.y))
 
     def select_drone(self, obs):
+        # print("__________________REEEEEEEEEEEEEEEE")
         drones = self.get_units_by_type(obs, units.Zerg.Drone)
         if len(drones) > 0:
             drone = random.choice(drones)
             # "select_all_type" works like ctrl clicking and drone's (x,y) is passed
-            print("_____________________DRONE DETECTED BBAPER___________________________________")
+            # print("_____________________DRONE DETECTED")
             return actions.FUNCTIONS.select_point("select_all_type", (drone.x, drone.y))
 
     # step() is similar to on_step() from sc2 library
@@ -114,7 +118,7 @@ class ZergAgent(base_agent.BaseAgent):
         # hard coded to find the player start location - only works on abyssalreef
         if obs.first():
             player_y, player_x = (
-                        obs.observation.feature_minimap.player_relative == features.PlayerRelative.SELF).nonzero()
+                    obs.observation.feature_minimap.player_relative == features.PlayerRelative.SELF).nonzero()
 
             x_mean = player_x.mean()
             y_mean = player_y.mean()
@@ -122,9 +126,17 @@ class ZergAgent(base_agent.BaseAgent):
             # gets the targeted attack coordinate based on where player spawned
             # only works for AbyssalReef
             if x_mean <= 31 and y_mean <= 31:
+                # attack bottom right
+                # spawned top left
                 self.attack_coordinates = (49, 49)
+                self.base_x = 12
+                self.base_y = 16
             else:
+                # attack top left
+                # spawned bottom right
                 self.attack_coordinates = (12, 16)
+                self.base_x = 49
+                self.base_y = 49
 
         smart_action = self.smart_actions[random.randrange(0, len(self.smart_actions))]
         print(smart_action)
@@ -140,32 +152,45 @@ class ZergAgent(base_agent.BaseAgent):
                     and self.can_do(obs, actions.FUNCTIONS.Train_Overlord_quick.id):
                 return actions.FUNCTIONS.Train_Overlord_quick("now")
 
+        elif smart_action == "buildextractor":
+            self.select_drone(obs)
+            if self.unit_type_is_selected(obs, units.Zerg.Drone) \
+                    and self.can_do(obs, actions.FUNCTIONS.Build_Extractor_screen.id):
+                pass
+
         # creates 1 spawning pool if all criteria met
         elif smart_action == "buildspawningpool":
-            print("_____________________________ME BUILD SPAWNING POOL________________________")
+            # print("_____________________________ME BUILD SPAWNING POOL")
             spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
-            print("__________________________FEELSOKAYMAN___________________________________________")
+            # print("__________________________FEELSOKAYMAN")
             if len(spawning_pools) == 0:
-                print("__________________________FEELSAMAZINGMAN")
+                # print("__________________________FEELSAMAZINGMAN")
                 self.select_drone(obs)
-                print("__________________________FEELSWEIRDMAN___________________________________________")
-                if self.unit_type_is_selected(obs, units.Zerg.Drone):
-                    print("__________________________MONKAS___________________________________________")
-                    if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
-                        print("__________________________PEPEGA___________________________________________")
-                        x = random.randint(0, 83)
-                        y = random.randint(0, 83)
-                        return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+                # print("__________________________FEELSWEIRDMAN")
+                # if self.unit_type_is_selected(obs, units.Zerg.Drone):
+                #     print("__________________________MONKAS")
+                #     if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
+                #         print("__________________________PEPEGA")
+                #         x = random.randint(0, 83)
+                #         y = random.randint(0, 83)
+                #         return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+                if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
+                    # print("__________________________PEPEGA")
+                    x = random.randint(self.base_x - 10, self.base_x + 10)
+                    y = random.randint(self.base_y - 10, self.base_y + 10)
+                    print("GOT THESE COORDINATES ", x, " ", y)
+                    return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
 
         # creates 1 roach warren if all criteria met
         elif smart_action == "buildroachwarren":
             roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
             if len(roach_warren) == 0:
                 self.select_drone(obs)
-                if self.unit_type_is_selected(obs, units.Zerg.RoachWarren) \
+                if self.unit_type_is_selected(obs, units.Zerg.Drone) \
                         and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
-                    x = random.randint(0, 83)
-                    y = random.randint(0, 83)
+                    x = random.randint(self.base_x - 10, self.base_x + 10)
+                    y = random.randint(self.base_y - 10, self.base_y + 10)
+                    print("GOT THESE COORDINATES ", x, " ", y)
                     return actions.FUNCTIONS.Build_RoachWarren_screen("now", (x, y))
 
         # creates roaches if all criteria met
@@ -184,17 +209,13 @@ class ZergAgent(base_agent.BaseAgent):
             #     return actions.FUNCTIONS.select_army("select")
             # attacks with all roaches if they are selected
             roaches = self.get_units_by_type(obs, units.Zerg.Roach)
-            if self.unit_type_is_selected(obs, units.Zerg.Roach) and len(roaches)>= 10:
+            if self.unit_type_is_selected(obs, units.Zerg.Roach) and len(roaches) >= 10:
                 if self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
                     return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
-            elif not self.unit_type_is_selected(
-                # selecting roaches + attack
-
-
-            )
-            if len(roaches) >= 10:
-                if self.unit_type_is_selected(obs, units.Zerg.Roach) \
-                        and self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
+            elif not self.unit_type_is_selected(obs, units.Zerg.Roach):
+                if self.can_do(obs, actions.FUNCTIONS.select_army.id):
+                    return actions.FUNCTIONS.select_army("select")
+                if self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id):
                     return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
 
         # selects the roaches
