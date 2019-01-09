@@ -65,21 +65,25 @@ class ZergAgent(base_agent.BaseAgent):
                               "buildspawningpool",
                               "selectlarva",
                               "trainroach",
-                              "traindrone",  # test if agent autotrains drones
+                              "traindrone",
                               "selectarmy",
                               "attack",
                               "buildroachwarren",
-                              "buildextractor"]
+                              "buildextractor",
+                              "trainzergling"]
 
         self.qlearn = QLearningTable(actions=list(range(len(self.smart_actions))))
 
     # checks if the current unit type is selected
     def unit_type_is_selected(self, obs, unit_type):
         # if something is selected and checks to see if the first selecting thing is same as passed unit type
-        if len(obs.observation.single_select) > 0 and obs.observation.single_select[0].unit_type == unit_type or \
-                len(obs.observation.multi_select) > 0 and obs.observation.multi_select[0].unit_type == unit_type:
+        if len(obs.observation.single_select) > 0 and obs.observation.single_select[0].unit_type == unit_type \
+                or len(obs.observation.multi_select) > 0 and obs.observation.multi_select[0].unit_type == unit_type:
+            print("SOMETHING GOOD HAPPENED")
             return True
-        return False
+        else:
+            print("SOMETHING BAD HAPPENED")
+            return False
 
     # returns a list of all units of that type
     def get_units_by_type(self, obs, unit_type):
@@ -140,12 +144,9 @@ class ZergAgent(base_agent.BaseAgent):
 
         # gets the current game state
 
-        current_state = [overlord_count,
-                         supply_limit,
-                         army_supply]
-
-
-
+        # current_state = [overlord_count,
+        #                  supply_limit,
+        #                  army_supply]
 
         # agent does nothing
         if smart_action == "donothing":
@@ -153,51 +154,67 @@ class ZergAgent(base_agent.BaseAgent):
 
         # creates overlord if supply <= 4 and all criteria met
         elif smart_action == "trainoverlord":
-            # self.select_larva(obs)
+            self.select_larva(obs)
             supply_left = obs.observation.player.food_cap - obs.observation.player.food_used
             if supply_left <= 4 and self.unit_type_is_selected(obs, units.Zerg.Larva) \
                     and self.can_do(obs, actions.FUNCTIONS.Train_Overlord_quick.id):
                 return actions.FUNCTIONS.Train_Overlord_quick("now")
 
-        elif smart_action == "buildextractor":
-            # self.select_drone(obs)
-            if self.unit_type_is_selected(obs, units.Zerg.Drone) \
-                    and self.can_do(obs, actions.FUNCTIONS.Build_Extractor_screen.id):
-                x = 0
-                y = 0
-                return actions.FUNCTIONS.Build_Extractor_screen("now", (x, y))
+        # elif smart_action == "buildextractor":
+        #     self.select_drone(obs)
+        #     if self.unit_type_is_selected(obs, units.Zerg.Drone) \
+        #             and self.can_do(obs, actions.FUNCTIONS.Build_Extractor_screen.id):
+        #         x = 0
+        #         y = 0
+        #         return actions.FUNCTIONS.Build_Extractor_screen("now", (x, y))
 
         # creates 1 spawning pool if all criteria met
         elif smart_action == "buildspawningpool":
             spawning_pools = self.get_units_by_type(obs, units.Zerg.SpawningPool)
+            print("CHECKING AMOUNT OF SPAWNING POOLS")
             if len(spawning_pools) == 0:
-                # self.select_drone(obs)
-                # if self.unit_type_is_selected(obs, units.Zerg.Drone):
-                #     if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
-                #         x = random.randint(0, 83)
-                #         y = random.randint(0, 83)
-                #         return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
-                if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
-                    x = random.randint(self.base_x - 10, self.base_x + 10)
-                    y = random.randint(self.base_y - 10, self.base_y + 10)
-                    print("GOT THESE COORDINATES: ", x, " ", y)
-                    return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+                print("TRYING TO SELECT A DRONE")
+                self.select_drone(obs)
+                print("GOT A DRONE")
+                if self.unit_type_is_selected(obs, units.Zerg.Drone):
+                    # if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
+                    #     x = random.randint(0, 83)
+                    #     y = random.randint(0, 83)
+                    #     return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
+                    print("IM GOING TO START BUILDING A SPAWNING POOL")
+                    if self.can_do(obs, actions.FUNCTIONS.Build_SpawningPool_screen.id):
+                        x = random.randint(self.base_x - 5, self.base_x + 5)
+                        y = random.randint(self.base_y - 5, self.base_y + 5)
+                        print("GOT THESE COORDINATES: ", x, " ", y)
+                        return actions.FUNCTIONS.Build_SpawningPool_screen("now", (x, y))
 
         # creates 1 roach warren if all criteria met
         elif smart_action == "buildroachwarren":
-            roach_warren = self.get_units_by_type(obs, units.Zerg.RoachWarren)
-            if len(roach_warren) == 0:
-                # self.select_drone(obs)
+            roach_warrens = self.get_units_by_type(obs, units.Zerg.RoachWarren)
+            if len(roach_warrens) == 0:
+                self.select_drone(obs)
                 if self.unit_type_is_selected(obs, units.Zerg.Drone) \
                         and self.can_do(obs, actions.FUNCTIONS.Build_RoachWarren_screen.id):
-                    x = random.randint(self.base_x - 10, self.base_x + 10)
-                    y = random.randint(self.base_y - 10, self.base_y + 10)
+                    x = random.randint(self.base_x - 5, self.base_x + 5)
+                    y = random.randint(self.base_y - 5, self.base_y + 5)
                     print("GOT THESE COORDINATES: ", x, " ", y)
                     return actions.FUNCTIONS.Build_RoachWarren_screen("now", (x, y))
 
+        elif smart_action == "traindrone":
+            self.select_larva(obs)
+            if self.unit_type_is_selected(obs, units.Zerg.Larva) \
+                    and self.can_do(obs, actions.FUNCTIONS.Train_Drone_quick.id):
+                return actions.FUNCTIONS.Train_Drone_quick("now")
+
+        elif smart_action == "trainzergling":
+            self.select_larva(obs)
+            if self.unit_type_is_selected(obs, units.Zerg.Larva) \
+                    and self.can_do(obs, actions.FUNCTIONS.Train_Zergling_quick.id):
+                return actions.FUNCTIONS.Train_Zergling_quick("now")
+
         # creates roaches if all criteria met
         elif smart_action == "trainroach":
-            # self.select_larva(obs)
+            self.select_larva(obs)
             if self.unit_type_is_selected(obs, units.Zerg.Larva) \
                     and self.can_do(obs, actions.FUNCTIONS.Train_Roach_quick.id):
                 return actions.FUNCTIONS.Train_Roach_quick("now")
@@ -216,11 +233,11 @@ class ZergAgent(base_agent.BaseAgent):
                     return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
 
             # used to force select the army
-            # elif not self.unit_type_is_selected(obs, units.Zerg.Roach):
-            #     if self.can_do(obs, actions.FUNCTIONS.select_army.id):
-            #         return actions.FUNCTIONS.select_army("select")
-            #     if self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id) and len(roaches) >= 10:
-            #         return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
+            elif not self.unit_type_is_selected(obs, units.Zerg.Roach):
+                if self.can_do(obs, actions.FUNCTIONS.select_army.id):
+                    return actions.FUNCTIONS.select_army("select")
+                if self.can_do(obs, actions.FUNCTIONS.Attack_minimap.id) and len(roaches) >= 10:
+                    return actions.FUNCTIONS.Attack_minimap("now", self.attack_coordinates)
 
         # selects the roaches
         elif smart_action == "selectarmy":
